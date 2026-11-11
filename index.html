@@ -232,8 +232,11 @@
   .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
   .q-due { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
   .q-due b { display: block; font-size: 15px; } .q-due small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
-  .q-due-b { position: relative; overflow: hidden; cursor: pointer; height: 36px; padding: 0 14px; font-size: 13px; }
-  .q-due-b input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .q-due-c { position: relative; display: flex; align-items: center; gap: 8px; }
+  .q-due-b { cursor: pointer; height: 36px; padding: 0 14px; font-size: 13px; }
+  .q-due-i { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+  .q-due-i.show { position: static; width: auto; height: 36px; opacity: 1; pointer-events: auto; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; color-scheme: light dark; }
+  .q-due-c.open .q-due-b { display: none; }
   .q-all { margin-top: 22px; scroll-margin-top: 12px; }
   .p-empty a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
   .action-b .btn + .btn { margin-left: 8px; }
@@ -994,7 +997,7 @@ function vQuestions() {
   const left = qs.filter((q) => !answered(q.id)).length;
   return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
     <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, or <a href="#qall" data-qall>answer them all at once</a> in a single voice note or message. Whichever is easier. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
-    <div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><label class="btn ghost q-due-b">Change date<input type="date" data-qdue min="${today}" value="${qDue()}"></label></div>
+    <div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>
     <div class="p-list">${qs.map((q, i) => { const own = answeredOwn(q.id), ok = own || answeredAll(); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>
     <div id="qall" class="q-all">${commentsHtml('q:all', false, 'Answer them all at once')}</div>`;
 }
@@ -1069,9 +1072,7 @@ async function setQDue(v, input) {
   if (v < today) { input.value = was; return toast('Please pick today or a later date'); }
   if (!FB.on) { input.value = was; return toast('Please open the full link you were sent to change the date'); }
   const nameEl = document.querySelector('.cmp[data-key="q:all"] .cmp-name');
-  const name = (myName() || (nameEl && nameEl.value) || '').trim();
-  if (!name) { input.value = was; toast('Please add your name in the box below first'); if (nameEl) nameEl.focus(); return; }
-  store.set('tracker.name', name);
+  const name = (myName() || (nameEl && nameEl.value) || '').trim() || ((B.meta && B.meta.owners && B.meta.owners.client) || 'Your team');
   try {
     await fbSend({ v: 1, item: 'q:all', author: name, role: 'client', kind: 'due', due: v, text: `I'll answer the questions by ${longDate(v)}.`, at: new Date().toISOString(), files: [] });
     toast(`Thanks. Date changed to ${longDate(v)}.`);
@@ -1169,6 +1170,13 @@ document.addEventListener('click', (e) => {
   const tk = t.closest('[data-task]'); if (tk) return openPanel('task', tk.dataset.task, inPanel);
   const ac = t.closest('[data-access]'); if (ac) return openPanel('access', ac.dataset.access, inPanel);
   const ph = t.closest('[data-phase]'); if (ph) return openPanel('phase', ph.dataset.phase, inPanel);
+  const qdo = t.closest('[data-qdue-open]');
+  if (qdo) {
+    const box = qdo.parentNode, i = box.querySelector('[data-qdue]');
+    try { if (typeof i.showPicker !== 'function') throw new Error('no picker'); i.showPicker(); }
+    catch { box.classList.add('open'); i.classList.add('show'); i.focus(); }
+    return;
+  }
   const qa = t.closest('[data-qall]'); if (qa) { e.preventDefault(); return openAllAtOnce(); }
   const qq = t.closest('[data-q]'); if (qq) return openPanel('question', qq.dataset.q, inPanel);
   const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
