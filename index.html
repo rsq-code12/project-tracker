@@ -230,6 +230,13 @@
   .action-n { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 99px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; text-decoration: none; border: 1px solid var(--ink); white-space: nowrap; }
   .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .q-due { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+  .q-due b { display: block; font-size: 15px; } .q-due small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
+  .q-due-b { position: relative; overflow: hidden; cursor: pointer; height: 36px; padding: 0 14px; font-size: 13px; }
+  .q-due-b input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .q-all { margin-top: 22px; scroll-margin-top: 12px; }
+  .p-empty a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .action-b .btn + .btn { margin-left: 8px; }
   .btn:disabled { opacity: .4; cursor: default; }
   .sign { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: flex; flex-direction: column; }
   .sign-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
@@ -432,9 +439,9 @@ function stampAt(iso) {
 }
 function msgHtml(m) {
   const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : `<a class="file-link" href="${fileUrl(m, i)}" target="_blank" rel="noopener" download="${esc(f.name || 'document')}">${svg('doc')}${esc(f.name || 'Document')}</a>`)).join('');
-  return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : m.kind === 'signed-doc' ? '<span class="ok-tag">Signed copy</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
+  return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : m.kind === 'signed-doc' ? '<span class="ok-tag">Signed copy</span>' : m.kind === 'due' ? '<span class="ok-tag">Date set</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
 }
-const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : (/^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
+const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : (key === 'q:all' ? '<p class="cm-note">One voice note or message covering all 8 is perfect. Just say the question number before each answer, for example “one: the short page”.</p>' : /^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
 function filesHtml(key) {
   return draft(key).files.map((f, i) => (/^image\//.test(f.type)
     ? `<div class="att"><img src="${f.url}" alt="Image to send"><div class="att-a"><button data-act="crop" data-key="${key}" data-i="${i}">Crop</button><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove image">${svg('x')}</button></div></div>`
@@ -559,6 +566,7 @@ async function sendMsg(key, kind) {
   } catch (e) { toast(e.message); }
   FB.sending = null;
   paintThreads(); paintComposer(key); paintPage();
+  if (/^q:/.test(key) && ui.stack.length) drawPanel(true);
 }
 
 /* ---------- Sign the scope, then pay ---------- */
@@ -743,7 +751,12 @@ const byId = (id) => B.tasks.find((t) => t.id === id);
 const accessById = (id) => B.access.find((a) => a.id === id);
 const docById = (id) => (B.documents || []).find((d) => d.id === id);
 const qById = (id) => (B.questions || []).find((q) => q.id === id);
-const answered = (id) => FB.on && thread(`q:${id}`).some((m) => m.role === 'client');
+const qReplies = (key) => (FB.on ? thread(key).filter((m) => m.role === 'client' && m.kind !== 'due') : []);
+const answeredAll = () => qReplies('q:all').length > 0;
+const answeredOwn = (id) => qReplies(`q:${id}`).length > 0;
+const answered = (id) => answeredOwn(id) || answeredAll();
+const qDue = () => { const set = FB.on ? thread('q:all').filter((m) => m.role === 'client' && m.kind === 'due' && /^\d{4}-\d{2}-\d{2}$/.test(m.due || '')).pop() : null; return set ? set.due : ((B.questions || [])[0] || {}).due || null; };
+const longDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 const phaseOf = (id) => B.phases.find((p) => p.id === id) || { name: '', color: '#999' };
 const who = (o) => (B.meta.owners || {})[o] || o;
 const lead = () => ((B.contact && B.contact.name) || 'us').split(' ')[0];
@@ -815,7 +828,7 @@ function compute() {
     ...inputs.filter((t) => t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
   ].sort(byBy);
   const qOpen = (B.questions || []).filter((q) => !answered(q.id));
-  if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: `Your input · ${qOpen.length} to answer`, by: (B.questions[0] || {}).due || null });
+  if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: `Your input · ${qOpen.length} to answer`, by: qDue() });
   const seen = new Set(needNow.map((n) => n.kind + n.id));
   const horizon = addDays(today, 21);
   const needSoon = [
@@ -980,15 +993,17 @@ function vQuestions() {
   const qs = B.questions || [];
   const left = qs.filter((q) => !answered(q.id)).length;
   return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
-    <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, in any order. You can attach files too. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
-    <div class="p-list">${qs.map((q, i) => { const ok = answered(q.id); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${ok ? 'Answered' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>`;
+    <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, or <a href="#qall" data-qall>answer them all at once</a> in a single voice note or message. Whichever is easier. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
+    <div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><label class="btn ghost q-due-b">Change date<input type="date" data-qdue min="${today}" value="${qDue()}"></label></div>
+    <div class="p-list">${qs.map((q, i) => { const own = answeredOwn(q.id), ok = own || answeredAll(); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>
+    <div id="qall" class="q-all">${commentsHtml('q:all', false, 'Answer them all at once')}</div>`;
 }
 function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
   let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}</div><h3>${esc(q.q)}</h3>`;
   if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   h += commentsHtml(`q:${q.id}`, false, 'Your answer');
-  if (next) h += `<div class="action-b" style="margin-top:16px"><button class="btn ghost" data-q="${next.id}">Next question</button></div>`;
+  h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
   return h;
 }
 function vMessage() {
@@ -1044,11 +1059,31 @@ function closePanel() {
 /* ---------- Render + live ---------- */
 function paintPage() { C = compute(); const y = window.scrollY; $('#app').innerHTML = page(C); window.scrollTo(0, y); stamp(); }
 // A link can open a section directly: ?open=questions (or needs, updates, docs, about, message, q:ID, task:ID, doc:ID, access:ID).
+function openAllAtOnce() {
+  if (!(ui.stack.length && ui.stack[ui.stack.length - 1].type === 'questions')) openPanel('questions');
+  setTimeout(() => { const el = document.getElementById('qall'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+}
+async function setQDue(v, input) {
+  const was = qDue();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v === was) return;
+  if (v < today) { input.value = was; return toast('Please pick today or a later date'); }
+  if (!FB.on) { input.value = was; return toast('Please open the full link you were sent to change the date'); }
+  const nameEl = document.querySelector('.cmp[data-key="q:all"] .cmp-name');
+  const name = (myName() || (nameEl && nameEl.value) || '').trim();
+  if (!name) { input.value = was; toast('Please add your name in the box below first'); if (nameEl) nameEl.focus(); return; }
+  store.set('tracker.name', name);
+  try {
+    await fbSend({ v: 1, item: 'q:all', author: name, role: 'client', kind: 'due', due: v, text: `I'll answer the questions by ${longDate(v)}.`, at: new Date().toISOString(), files: [] });
+    toast(`Thanks. Date changed to ${longDate(v)}.`);
+  } catch (e) { input.value = was; toast(e.message); }
+  paintPage(); drawPanel(true);
+}
 function openFromLink() {
   const o = new URLSearchParams(location.search).get('open') || new URLSearchParams(location.hash.slice(1)).get('open');
   if (!o) return;
   const [type, id] = o.split(':');
   if (['needs', 'updates', 'docs', 'about', 'message', 'questions'].includes(type) && !id) return openPanel(type);
+  if (type === 'q' && id === 'all') return openAllAtOnce();
   if (type === 'q' && qById(id)) { openPanel('questions'); return openPanel('question', id, true); }
   if ((type === 'task' && byId(id)) || (type === 'doc' && docById(id)) || (type === 'access' && accessById(id))) return openPanel(type, id);
 }
@@ -1134,6 +1169,7 @@ document.addEventListener('click', (e) => {
   const tk = t.closest('[data-task]'); if (tk) return openPanel('task', tk.dataset.task, inPanel);
   const ac = t.closest('[data-access]'); if (ac) return openPanel('access', ac.dataset.access, inPanel);
   const ph = t.closest('[data-phase]'); if (ph) return openPanel('phase', ph.dataset.phase, inPanel);
+  const qa = t.closest('[data-qall]'); if (qa) { e.preventDefault(); return openAllAtOnce(); }
   const qq = t.closest('[data-q]'); if (qq) return openPanel('question', qq.dataset.q, inPanel);
   const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
   const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);
@@ -1146,6 +1182,7 @@ document.addEventListener('change', (e) => {
     if (!files.length) return toast('Please choose a PDF or photos of the signed pages');
     SIGNDOC = { docId: e.target.dataset.signeddoc, files }; drawPanel(true); return;
   }
+  if (e.target.dataset && 'qdue' in e.target.dataset) { setQDue(e.target.value, e.target); return; }
   if (e.target.id === 'sigfile') { loadSigFile(e.target.files[0]); e.target.value = ''; return; } if (e.target.dataset && e.target.dataset.pick) { addImages(e.target.dataset.pick, [...e.target.files]); e.target.value = ''; } });
 document.addEventListener('paste', (e) => {
   const c = e.target.closest && e.target.closest('.cmp'); if (!c) return;
