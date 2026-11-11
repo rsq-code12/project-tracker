@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#F5F7FA; --card:#FFFFFF; --ink:#16202C; --muted:#5B6677; --line:#E1E7EF; --blue:#1558E8; --soft:#EAF1FF; --red:#C2410C; --redsoft:#FDECE5; --green:#0F8F7E; --greensoft:#E3F4EF; --yellow:#FFF7BF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 Inter, system-ui, -apple-system, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--blue); color: var(--blue); }
+  button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button.primary:hover { color: #fff; opacity: .9; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .brand { font-weight: 800; font-size: 16px; } .brand span { color: var(--muted); font-weight: 500; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { border: 0; background: transparent; font-weight: 600; color: var(--muted); }
+  nav button.on { background: var(--soft); color: var(--blue); }
+  .right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .right button, .right a { white-space: nowrap; }
+  .right a { color: var(--blue); text-decoration: none; font-weight: 600; margin-left: 8px; }
+  #dayLabel { font-weight: 700; min-width: 110px; text-align: center; }
+  main { max-width: 1200px; margin: 0 auto; padding: 18px 20px 80px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } .sub { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; font-weight: 800; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .card h2 small { color: var(--muted); font-weight: 500; }
+  .cols { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; align-items: start; }
+  .pill { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 10px; background: #EEF1F6; color: var(--muted); cursor: pointer; border: 0; white-space: nowrap; }
+  .pill.synced { background: var(--greensoft); color: var(--green); } .pill.pending { background: var(--yellow); color: #6B5B00; } .pill.error { background: var(--redsoft); color: var(--red); }
+  .brief { background: var(--ink); color: #fff; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+  .brief .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; opacity: .65; display: flex; justify-content: space-between; gap: 10px; }
+  .brief h2 { margin: 4px 0 10px; font-size: 18px; }
+  .brief ol { margin: 0; padding-left: 20px; } .brief li { margin-bottom: 8px; opacity: .95; } .brief li b { color: #fff; }
+  .brief .tid { color: #9CC0FF; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .brief .go { margin-top: 6px; background: #fff; color: var(--ink); border: 0; font-weight: 700; padding: 8px 14px; }
+  .next { background: var(--ink); color: #fff; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .next .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; opacity: .7; }
+  .next .task { font-size: 17px; font-weight: 800; margin: 2px 0; } .next .step { opacity: .9; }
+  .next button { background: #fff; color: var(--ink); border: 0; font-weight: 700; padding: 8px 14px; }
+  .row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 9px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+  .row:hover { background: #F8FAFD; border-color: var(--line); }
+  .row.done .rt { text-decoration: line-through; color: var(--muted); }
+  .row input { width: 17px; height: 17px; cursor: pointer; accent-color: var(--green); }
+  .rt { font-weight: 600; } .rt b { color: var(--muted); font-weight: 700; margin-right: 4px; }
+  .rs { color: var(--muted); font-size: 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 1px; }
+  .rprog { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; }
+  .mini { width: 60px; height: 6px; background: #EEF1F6; border-radius: 4px; overflow: hidden; } .mini i { display: block; height: 100%; background: var(--green); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tag { font-size: 11px; border-radius: 6px; padding: 1px 6px; background: #EEF1F6; color: var(--muted); font-weight: 600; }
+  .tag.priv { background: var(--ink); color: #fff; } .tag.cond { background: var(--yellow); color: #6B5B00; } .tag.wait { background: var(--redsoft); color: var(--red); }
+  .tag.P1 { background: var(--redsoft); color: var(--red); } .tag.doing { background: var(--soft); color: var(--blue); }
+  .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; margin: 12px 0 4px; }
+  .sec:first-child { margin-top: 0; }
+  .empty { color: var(--muted); padding: 4px 8px 8px; }
+  .alert { color: var(--red); }
+  .phasehead { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
+  .phasehead .bar { flex: 1; max-width: 240px; height: 7px; background: #EEF1F6; border-radius: 5px; overflow: hidden; } .phasehead .bar i { display: block; height: 100%; }
+  .tools { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; } .tools input[type=search] { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--card); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; } th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; } th { color: var(--muted); font-size: 12px; }
+  select { border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; background: var(--card); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } .kv b { display: block; font-size: 12px; color: var(--muted); font-weight: 600; } .kv div { margin-bottom: 8px; }
+  ol.clean, ul.clean { margin: 0; padding-left: 20px; } ol.clean li, ul.clean li { margin-bottom: 6px; }
+  .tpl { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; } .tpl .head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .tpl pre, .msg { white-space: pre-wrap; font: 13px/1.5 Inter, system-ui, sans-serif; background: #F7F9FC; border-radius: 8px; padding: 10px; margin: 8px 0 0; }
+  textarea { width: 100%; min-height: 70px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--card); }
+  .form { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; } .form textarea { min-height: 40px; }
+  .log div { padding: 7px 0; border-bottom: 1px solid var(--line); } .log small { color: var(--muted); margin-right: 8px; }
+  code { background: #EEF1F6; border-radius: 4px; padding: 1px 4px; font-size: 12.5px; }
+  .pb-phase { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); } .pb-phase b { display: block; }
+  .rule { padding: 6px 0 6px 26px; position: relative; } .rule::before { content: '✕'; position: absolute; left: 4px; color: var(--red); font-weight: 800; }
+  /* Drawer */
+  #scrim { position: fixed; inset: 0; background: rgba(22,32,44,.25); opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 20; }
+  #scrim.on { opacity: 1; pointer-events: auto; }
+  #drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100%); background: var(--card); z-index: 30; transform: translateX(105%); transition: transform .2s; display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,.08); }
+  #drawer.on { transform: none; }
+  .dtop { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-start; }
+  .dtop .eyebrow { font-size: 12px; color: var(--muted); font-weight: 600; } .dtop h2 { margin: 2px 0 8px; font-size: 18px; line-height: 1.3; }
+  .dtop .close { margin-left: auto; font-size: 18px; line-height: 1; padding: 4px 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dbody { overflow: auto; padding: 14px 20px 40px; }
+  .seg { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+  .seg button { flex: 1; border: 0; border-radius: 0; border-right: 1px solid var(--line); font-weight: 600; }
+  .seg button:last-child { border-right: 0; } .seg button.on { background: var(--blue); color: #fff; }
+  .seg button.on.done { background: var(--green); } .seg button.on.waiting { background: var(--red); }
+  .dsec { margin-bottom: 18px; } .dsec h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .dsec h3 button { text-transform: none; letter-spacing: 0; font-size: 12px; padding: 3px 8px; }
+  .dsec p { margin: 0; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+  .steps li.ok { background: var(--greensoft); border-color: #BFE5DA; } .steps li.ok b { text-decoration: line-through; color: var(--muted); }
+  .steps input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--green); cursor: pointer; }
+  .steps .n { color: var(--muted); font-weight: 700; margin-right: 4px; } .steps .sd { color: #3E4A5C; font-size: 13px; margin-top: 3px; white-space: pre-wrap; }
+  .box { border-radius: 10px; padding: 10px 12px; } .box.warn { background: var(--redsoft); } .box.tip { background: var(--soft); } .box ul { margin: 0; padding-left: 18px; }
+  .dep { display: inline-block; margin: 0 6px 6px 0; cursor: pointer; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 40; }
+  #toast.on { opacity: 1; }
+  .im { border-top: 1px solid var(--line); padding: 10px 0; }
+  .im:first-of-type { border-top: 0; }
+  .im.me { padding-left: 14px; border-left: 3px solid var(--soft); }
+  .im.new .im-h b { color: var(--blue); }
+  .im-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .im-h small { color: var(--muted); }
+  .im-t { white-space: pre-wrap; margin-top: 4px; }
+  .im-img { max-height: 180px; max-width: 100%; border-radius: 8px; margin-top: 8px; border: 1px solid var(--line); display: block; background: #fff; }
+  .im audio { display: block; margin-top: 8px; }
+  #inboxNav b { background: var(--red); color: #fff; border-radius: 99px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
+  .offline { max-width: 560px; margin: 60px auto; text-align: center; }
+  @media (max-width: 900px) { .cols, .grid2 { grid-template-columns: 1fr; } .right { margin-left: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Project <span>desk · briefs from your director</span></div>
+  <nav id="nav">
+    <button data-view="today" class="on">Today</button>
+    <button data-view="plan">Plan</button>
+    <button data-view="playbook">Clean-up playbook</button>
+    <button data-view="client">Client</button>
+    <button data-view="updates">Updates</button>
+    <button data-view="inbox" id="inboxNav">Inbox</button>
+  </nav>
+  <div class="right">
+    <button id="prev" title="Previous day">‹</button><span id="dayLabel"></span><button id="next" title="Next day">›</button>
+    <button id="todayBtn">Today</button>
+    <button class="pill" id="syncPill" title="Click to save to GitHub now">…</button>
+    <button id="shareBtn" title="Copy the private link to the client's live tracker">Copy the client's link</button>
+    <button id="deskLinkBtn" title="Your own live desk: opens on your phone. Private, never share it.">My live desk</button>
+    <button id="previewBtn" title="Open the client's tracker as she'll see it, with comments and signing">Tracker preview ↗</button>
+  </div>
+</header>
+<main id="view"></main>
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true"><div class="dtop" id="dtop"></div><div class="dbody" id="dbody"></div></aside>
+<div id="toast"></div>
+<meta name="robots" content="noindex">
+<script>// Live desk adapter (added only to the published copy). It answers the desk's /api calls in the
+// browser: reads come from the encrypted snapshot, changes are sent to the comment Worker encrypted
+// with the desk key (the Mac desk applies them), and the Inbox talks to the Worker directly.
+(() => {
+  window.LIVE_DESK = true;
+  const realFetch = window.fetch.bind(window);
+  const hashKey = new URLSearchParams(location.hash.slice(1)).get('k');
+  const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const unb64url = (s) => unb64(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4));
+  const imp = (k) => crypto.subtle.importKey('raw', unb64url(k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+  const open = async (key, e) => new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(e.iv) }, key, unb64(e.ct)));
+  const seal = async (key, obj) => { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)))); return { iv: b64(iv), ct: b64(ct) }; };
+  const gunzip = async (u8) => new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const spaceOf = async (k) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', unb64url(k)))].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+  const PK = 'desk.pending.' + String(hashKey || '').slice(0, 8), RK = 'desk.read.' + String(hashKey || '').slice(0, 8);
+  const todayStr = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+
+  let S = null, loadedAt = 0, pending = store.get(PK, []);
+  const L = {};
+  async function loadSnapshot() {
+    if (!hashKey) throw new Error('This link is incomplete. Open the full desk link, including everything after the # sign.');
+    if (typeof DecompressionStream === 'undefined') throw new Error('Please update your browser to open the live desk.');
+    const r = await realFetch('desk.enc.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('The live desk is not published yet. Open your desk on the Mac once, then try again in 2 minutes.');
+    const e = await r.json();
+    if (!L.deskKey) { L.deskKey = await imp(hashKey); L.deskSpace = await spaceOf(hashKey); }
+    let snap;
+    try { snap = JSON.parse(await gunzip(await open(L.deskKey, e))); } catch { throw new Error('This desk link has expired or is wrong.'); }
+    S = snap; loadedAt = Date.now();
+    if (S.live.trackerKey && !L.trKey) { L.trKey = await imp(S.live.trackerKey); L.trSpace = await spaceOf(S.live.trackerKey); }
+    const done = new Set(S.live.appliedOps || []);
+    pending = pending.filter((op) => !done.has(op.id) && Date.now() - Date.parse(op.at) < 14 * 864e5);
+    store.set(PK, pending);
+    document.title = `${S.base.meta.project} · live desk`;
+    retryUnsent();
+  }
+  const ready = () => (S && Date.now() - loadedAt < 60000 ? Promise.resolve() : loadSnapshot());
+
+  // ----- changes made here -----
+  async function send(op) {
+    try {
+      const r = await realFetch(`${S.live.feedbackUrl}/s/${L.deskSpace}/m`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await seal(L.deskKey, op)) });
+      if (!r.ok) throw new Error();
+      delete op.unsent;
+    } catch { op.unsent = true; }
+    store.set(PK, pending);
+  }
+  function retryUnsent() { pending.filter((op) => op.unsent).forEach(send); }
+  async function queue(path, body) {
+    const { day, ...rest } = body || {};
+    const op = { v: 1, kind: 'op', id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), path, body: rest, at: new Date().toISOString() };
+    pending.push(op);
+    await send(op);
+  }
+  function applyOp(P, op) {
+    const b = op.body || {}, date = op.at.slice(0, 10);
+    const t = (P.tasks || []).find((x) => x.id === b.id) || (P.recurring || []).find((x) => x.id === b.id);
+    switch (op.path) {
+      case '/api/task': if (t) { t.status = b.status; if (b.status === 'done') t.doneOn = date; else delete t.doneOn; if (b.status === 'doing' && !t.startedOn) t.startedOn = date; } break;
+      case '/api/step': if (t) { const s = new Set(t.stepsDone || []); if (b.done) s.add(Number(b.index)); else s.delete(Number(b.index)); t.stepsDone = [...s].sort((x, y) => x - y); } break;
+      case '/api/note': if (t) t.note = String(b.note || ''); break;
+      case '/api/update': (P.updates || (P.updates = [])).unshift({ date, text: String(b.text || ''), visibility: b.visibility === 'private' ? 'private' : 'shared' }); break;
+      case '/api/log': (P.client.log || (P.client.log = [])).unshift({ date, kind: String(b.kind || 'Note'), text: String(b.text || '') }); break;
+      case '/api/access': { const a = (P.access || []).find((x) => x.id === b.id); if (a) a.status = b.status; break; }
+      case '/api/flag': P.flags[b.name] = b.value; break;
+    }
+  }
+
+  // ----- the client's messages (Inbox) -----
+  const msgs = new Map(), urls = new Map();
+  let inboxAt = 0, inboxView = { connected: false, unread: 0, total: 0, items: [], error: null };
+  async function inbox(force) {
+    if (!L.trKey || !S.live.feedbackUrl) return inboxView;
+    if (!force && Date.now() - inboxAt < 30000) return inboxView;
+    const base = S.live.feedbackUrl;
+    const idx = (await (await realFetch(`${base}/s/${L.trSpace}/m?t=${Date.now()}`)).json()).items || [];
+    await Promise.all(idx.filter(({ id }) => !msgs.has(id)).map(async ({ id }) => {
+      try { const r = await realFetch(`${base}/s/${L.trSpace}/m/${id}`); msgs.set(id, r.ok ? JSON.parse(new TextDecoder().decode(await open(L.trKey, await r.json()))) : null); } catch { msgs.set(id, null); }
+    }));
+    const read = new Set([...(S.live.readIds || []), ...store.get(RK, [])]);
+    const items = idx.map(({ id }) => msgs.get(id) && { id, ...msgs.get(id) }).filter(Boolean).sort((a, b) => String(a.at).localeCompare(String(b.at)))
+      .map(({ files, ...m }) => ({ ...m, unread: m.role !== 'lead' && !read.has(m.id), files: (files || []).map((f, n) => {
+        const k = `${m.id}:${n}`;
+        if (!urls.has(k)) urls.set(k, URL.createObjectURL(new Blob([unb64(f.data)], { type: f.type })));
+        return { type: f.type, name: f.name, url: urls.get(k) };
+      }) }));
+    inboxAt = Date.now();
+    inboxView = { connected: true, error: null, unread: items.filter((m) => m.unread).length, total: items.length, items };
+    return inboxView;
+  }
+
+  async function data(day) {
+    await ready();
+    const P = JSON.parse(JSON.stringify(S.base));
+    const keys = Object.keys(S.days).sort();
+    const d = S.days[day] || S.days[keys.filter((k) => k <= day).pop() || keys[0]];
+    Object.assign(P, d, { day, today: todayStr() });
+    for (const op of pending) applyOp(P, op);
+    const waiting = pending.length;
+    P.sync = { state: waiting ? 'pending' : 'synced', at: S.generatedAt, connected: true,
+      detail: waiting ? `${waiting} change${waiting === 1 ? '' : 's'} saved here. They reach your files when the desk runs on your Mac.` : `Live copy, updated ${new Date(S.generatedAt).toLocaleString()}.` };
+    try { const i = await inbox(); P.inbox = { connected: i.connected, unread: i.unread, total: i.total, error: null }; } catch { P.inbox = { connected: false, unread: 0, total: 0, error: 'offline' }; }
+    P.signedPdf = false;
+    return P;
+  }
+
+  const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
+  window.fetch = async (input, init = {}) => {
+    const u = new URL(typeof input === 'string' ? input : input.url, location.href);
+    const m = u.pathname.match(/\/api\/(.+)$/);
+    if (!m) return realFetch(input, init);
+    const route = '/api/' + m[1];
+    const body = init.body ? JSON.parse(init.body) : null;
+    try {
+      if (!body && route === '/api/data') return json(await data(u.searchParams.get('day') || todayStr()));
+      if (!body && route === '/api/feedback') { await ready(); return json(await inbox(true)); }
+      if (!body && route === '/api/desklink') return json({ url: location.href });
+      if (!body) return json({ error: 'Not available on the live desk' }, 404);
+      await ready();
+      const day = body.day || todayStr();
+      switch (route) {
+        case '/api/task': case '/api/step': case '/api/note': case '/api/update': case '/api/log': case '/api/access': case '/api/flag':
+          await queue(route, body); return json(await data(day));
+        case '/api/feedback/read': {
+          const r = new Set(store.get(RK, [])); (body.ids || []).forEach((id) => r.add(String(id))); store.set(RK, [...r]);
+          await queue(route, { ids: body.ids || [] }); inboxAt = 0; return json({ ok: true });
+        }
+        case '/api/feedback/reply': {
+          const text = String(body.text || '').trim().slice(0, 4000);
+          if (!text) return json({ error: 'Write a reply first' }, 400);
+          const msg = { v: 1, item: String(body.item || 'general'), author: S.live.owner || 'Me', role: 'lead', kind: 'comment', text, at: new Date().toISOString(), files: [] };
+          const r = await realFetch(`${S.live.feedbackUrl}/s/${L.trSpace}/m`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await seal(L.trKey, msg)) });
+          if (!r.ok) return json({ error: 'Could not send. Please try again.' }, 502);
+          inboxAt = 0; return json(await data(day));
+        }
+        case '/api/share': {
+          const k = S.live.trackerKey, base = S.live.trackerUrl;
+          return json(k && base ? { url: `${base}#k=${k}`, live: true, preview: `${base}#k=${k}` } : { url: null, why: 'The client tracker is not published yet.' });
+        }
+        case '/api/desklink': return json({ url: location.href });
+        case '/api/sync': loadedAt = 0; retryUnsent(); return json(await data(day));
+        case '/api/sign-scope': return json({ error: 'Make the signed PDF on the Mac desk.' }, 400);
+        default: return json({ error: 'Not available on the live desk' }, 404);
+      }
+    } catch (e) { return json({ error: e.message || 'Something went wrong' }, 500); }
+  };
+})();
+</script>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const rich = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+const fmt = (d) => d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : '';
+const addDays = (day, n) => { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const localToday = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const OWNERS = { me: 'Me', aoife: 'the client', bytescout: 'ByteScout', automation: 'Automation team', ca: 'CA' };
+const STATUS = [['todo', 'To do'], ['doing', 'Doing'], ['waiting', 'Waiting'], ['done', 'Done']];
+let D = null;
+const state = { view: 'today', day: localToday(), open: null, showDone: false, q: '', closedPhases: new Set() };
+
+async function api(path, body) {
+  const opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, day: state.day }) } : {};
+  const r = await fetch(path + (body ? '' : `?day=${state.day}`), opt);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'Request failed');
+  return j;
+}
+async function refresh() { D = await api('/api/data'); render(); if (state.open) openItem(state.open, true); }
+async function act(path, body, msg) {
+  try { D = await api(path, body); render(); if (state.open) openItem(state.open, true); if (msg) toast(msg); }
+  catch (e) { toast('Could not save: ' + e.message); }
+}
+
+const task = (id) => D.tasks.find((t) => t.id === id) || D.recurring.find((r) => r.id === id);
+const phase = (t) => D.phases.find((p) => p.id === t.phase);
+const isCond = (t) => t.if && D.flags[t.if] == null;
+const applies = (t) => !t.if || D.flags[t.if] !== false;
+const range = (t) => t.start === t.due ? fmt(t.due) : `${fmt(t.start)} to ${fmt(t.due)}`;
+function progress(t) { const n = t.brief?.steps?.length || 0; const k = (t.stepsDone || []).length; return { n, k }; }
+
+function row(t, extra = '') {
+  const p = phase(t), { n, k } = progress(t);
+  return `<div class="row ${t.status}" data-open="${t.id}">
+    <input type="checkbox" data-done="${t.id}" ${t.status === 'done' ? 'checked' : ''} title="Mark the whole task done">
+    <div><div class="rt"><b>${t.id}</b>${esc(t.title)}</div>
+      <div class="rs"><span class="dot" style="background:${p.color}"></span>${esc(p.name)} · ${range(t)} · ${t.est || 0} h
+        ${t.priority === 'P1' ? '<span class="tag P1">P1</span>' : ''}${t.status === 'doing' ? '<span class="tag doing">doing</span>' : ''}${t.status === 'waiting' ? '<span class="tag wait">waiting</span>' : ''}
+        ${t.owner !== 'me' ? `<span class="tag">${OWNERS[t.owner] || t.owner}</span>` : ''}${t.visibility === 'private' ? '<span class="tag priv">private</span>' : ''}${isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${extra}</div></div>
+    <div class="rprog">${n ? `<div class="mini"><i style="width:${(k / n) * 100}%"></i></div>${k}/${n}` : ''}</div>
+  </div>`;
+}
+const rows = (ids, extra) => { const ts = ids.map(task).filter(Boolean); return ts.length ? ts.map((t) => row(t, extra ? extra(t) : '')).join('') : '<div class="empty">Nothing here.</div>'; };
+
+function ago(iso) { if (!iso) return ''; const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : fmt(iso.slice(0, 10)); }
+function renderSync() {
+  const s = D.sync || {}, el = $('#syncPill');
+  const text = { synced: `Saved to GitHub ${ago(s.at)}`, pending: 'Saving to GitHub soon…', local: s.connected ? 'Saved locally' : 'Saved on this Mac', off: 'Not saved to git', error: 'Sync problem', idle: s.connected ? 'GitHub connected' : 'GitHub not connected' }[s.state] || '…';
+  el.textContent = text; el.className = 'pill ' + (s.state || ''); el.title = (s.detail || '') + ' · Click to save now';
+}
+function render() {
+  renderSync();
+  $('#dayLabel').textContent = fmt(state.day);
+  $('#todayBtn').style.display = state.day === localToday() ? 'none' : '';
+  document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === state.view));
+  const n = (D.inbox && D.inbox.unread) || 0;
+  $('#inboxNav').innerHTML = `Inbox${n ? ` <b>${n}</b>` : ''}`;
+  const v = { today: viewToday, plan: viewPlan, playbook: viewPlaybook, client: viewClient, updates: viewUpdates, inbox: viewInbox }[state.view];
+  $('#view').innerHTML = v();
+}
+
+const tid = (id) => `<span class="tid" data-open="${id}">${id}</span>`;
+function briefing() {
+  const a = D.agenda, na = D.nextAction, hpd = D.meta.hoursPerDay;
+  const hr = new Date().getHours();
+  const hello = a.day !== D.today ? `Your plan for ${fmt(a.day)}` : hr < 12 ? 'Good morning, Ranjeet. Here is your day.' : hr < 17 ? 'Good afternoon, Ranjeet. Here is the rest of your day.' : 'Good evening, Ranjeet. Here is where things stand.';
+  const out = [];
+  if (D.inbox && D.inbox.unread) out.push(`<b>Reply to the client first:</b> ${D.inbox.unread} new message${D.inbox.unread === 1 ? '' : 's'} in the <span class="tid" data-goinbox>Inbox</span>. Same-day replies are part of the scope.`);
+  if (a.overdue.length) out.push(`<b>Clear the overdue work first:</b> ${a.overdue.map((id) => `${tid(id)} ${esc(task(id).title)}`).join('; ')}. Finish it, or move the date and tell the client today if it affects her.`);
+  if (na) {
+    const t = task(na.id), why = (t.brief?.why || '').split(/(?<=\.)\s/)[0];
+    out.push(`<b>Start with ${tid(na.id)}: ${esc(t.title)}.</b> ${na.step >= 0 ? `You're on step ${na.step + 1} of ${na.of}: ${esc(na.text)}.` : ''} ${why ? `<span style="opacity:.8">${esc(why)}</span>` : ''}`);
+  } else out.push('<b>Nothing is scheduled.</b> Pull the first task from "Coming next" forward.');
+  const rest = a.active.filter((id) => !na || id !== na.id);
+  if (rest.length) out.push(`<b>Then, in this order:</b> ${rest.map((id) => `${tid(id)} ${esc(task(id).title)}`).join('; ')}.`);
+  if (a.waiting.length) out.push(`<b>Chase, politely:</b> ${a.waiting.map((id) => `${tid(id)} ${esc(task(id).title)}`).join('; ')}. Use the "Waiting on something" template in the Client tab.`);
+  const rec = D.recurring.filter((r) => a.recurring.includes(r.id));
+  if (rec.length) out.push(`<b>Regular today:</b> ${rec.map((r) => esc(r.title)).join('; ')}.`);
+  if (a.hours > hpd) out.push(`<b>You're over capacity</b> (${a.hours} h planned of ${hpd} h). Move the lowest-priority task now, not at 6 pm.`);
+  else if (a.hours < hpd * 0.5 && a.nextUp.length) out.push(`<b>You have spare time</b> (${a.hours} h planned of ${hpd} h). Pull ${tid(a.nextUp[0])} ${esc(task(a.nextUp[0]).title)} forward.`);
+  out.push('<b>Before you stop:</b> tick what you finished, add one shared update for the client (Updates tab), and log any decision or payment in the Client tab.');
+  return `<div class="brief"><div class="lbl"><span>Director's briefing</span><span>${fmt(a.day)} · ${a.daysToLaunch} days to launch</span></div><h2>${hello}</h2><ol>${out.map((x) => `<li>${x}</li>`).join('')}</ol>
+    ${na ? `<button class="go" data-open="${na.id}">Open ${na.id} and start</button>` : ''}</div>`;
+}
+
+function viewToday() {
+  const a = D.agenda;
+  const nextCard = briefing();
+  const activeSet = new Set(a.active);
+  const soon = a.dueSoon.filter((id) => !activeSet.has(id));
+  const rec = D.recurring.filter((r) => a.recurring.includes(r.id));
+  const over = a.hours > D.meta.hoursPerDay;
+  return `<h1>${a.day === D.today ? 'Today' : fmt(a.day)}</h1>
+    <p class="sub">${a.phases.map((id) => D.phases.find((p) => p.id === id).name).join(' + ') || 'Between phases'} · ${a.daysToLaunch} days to launch · about <b class="${over ? 'alert' : ''}">${a.hours} h</b> planned of ${D.meta.hoursPerDay} h${a.hoursIf ? ` (+${a.hoursIf} h if the features come to you)` : ''}${over ? ' · <b class="alert">over capacity: move or split something</b>' : ''}</p>
+    ${nextCard}
+    <div class="cols">
+      <div>
+        <div class="card"><h2>Do today <small>click a task for the full brief</small></h2>${rows(a.active, (t) => t.due === a.day ? '<span class="tag P1">due today</span>' : '')}</div>
+        <div class="card"><h2>Regular tasks today</h2>${rec.length ? rec.map((r) => `<div class="row" data-open="${r.id}"><span></span><div><div class="rt">${esc(r.title)}</div><div class="rs">${r.visibility === 'private' ? '<span class="tag priv">private</span>' : '<span class="tag">shared</span>'}</div></div><div></div></div>`).join('') : '<div class="empty">None today.</div>'}</div>
+      </div>
+      <div>
+        <div class="card"><h2>Reminders</h2>
+          <div class="sec ${a.overdue.length ? 'alert' : ''}">Overdue</div>${rows(a.overdue, (t) => `<span class="tag P1">was due ${fmt(t.due)}</span>`)}
+          <div class="sec">Waiting on others</div>${rows(a.waiting)}
+          <div class="sec">Also due in the next 2 days</div>${rows(soon)}
+        </div>
+        <div class="card"><h2>Coming next</h2>${rows(a.nextUp, (t) => `<span class="tag">starts ${fmt(t.start)}</span>`)}</div>
+      </div>
+    </div>`;
+}
+
+function viewPlan() {
+  const q = state.q.toLowerCase();
+  const all = D.tasks.filter(applies);
+  const done = all.filter((t) => t.status === 'done').length;
+  let html = `<h1>Plan</h1><p class="sub">${done} of ${all.length} tasks done · launch ${fmt(D.meta.launch)} · features decision: <b>${D.flags.features == null ? 'not decided' : D.flags.features ? 'they come to you' : 'ByteScout keeps them'}</b>
+      <select id="flagFeatures" style="margin-left:6px"><option value="null"${D.flags.features == null ? ' selected' : ''}>Not decided</option><option value="true"${D.flags.features === true ? ' selected' : ''}>Features come to me</option><option value="false"${D.flags.features === false ? ' selected' : ''}>ByteScout keeps them</option></select></p>
+    <div class="tools"><input type="search" id="q" placeholder="Search tasks" value="${esc(state.q)}"><label><input type="checkbox" id="showDone" ${state.showDone ? 'checked' : ''}> Show done</label></div>`;
+  for (const p of D.phases) {
+    const ts = D.tasks.filter((t) => t.phase === p.id && applies(t));
+    if (!ts.length) continue;
+    const d = ts.filter((t) => t.status === 'done').length;
+    const list = ts.filter((t) => (state.showDone || t.status !== 'done') && (!q || `${t.id} ${t.title}`.toLowerCase().includes(q)));
+    const closed = state.closedPhases.has(p.id) && !q;
+    html += `<div class="card"><div class="phasehead" data-toggle="${p.id}"><div><b>${esc(p.name)}</b> <span class="tag">${fmt(p.start)} to ${fmt(p.end)}</span></div>
+      <div class="bar"><i style="width:${(d / ts.length) * 100}%;background:${p.color}"></i></div><small>${d}/${ts.length} done ${closed ? '▸' : '▾'}</small></div>
+      ${closed ? '' : `<div style="margin-top:8px">${list.length ? list.map((t) => row(t)).join('') : '<div class="empty">All done here.</div>'}</div>`}</div>`;
+  }
+  return html;
+}
+
+function viewPlaybook() {
+  const P = D.playbook;
+  const opts = ['todo', 'asked', 'waiting', 'received', 'not needed'];
+  const got = D.access.filter((x) => ['received', 'not needed'].includes(x.status)).length;
+  return `<h1>${esc(P.title)}</h1><p class="sub">${esc(P.intro)}</p>
+    <div class="card"><h2>Where the work happens</h2>${P.where.map((w) => `<div style="margin-bottom:10px"><b>${esc(w.t)}</b><div class="sd" style="color:#3E4A5C">${rich(w.d)}</div></div>`).join('')}</div>
+    <div class="card"><h2>Access you need from the client <small>${got} of ${D.access.length} sorted</small></h2>
+      <table><thead><tr><th>What</th><th>Why</th><th>From</th><th>How</th><th>By</th><th>Status</th></tr></thead><tbody>
+      ${D.access.map((x) => `<tr><td><b>${esc(x.item)}</b></td><td>${esc(x.why)}</td><td>${esc(x.from)}</td><td>${esc(x.how)}</td><td>${esc(x.when)}</td>
+        <td><select data-access="${x.id}">${opts.map((o) => `<option${o === x.status ? ' selected' : ''}>${o}</option>`).join('')}</select></td></tr>`).join('')}
+      </tbody></table>
+      <p style="margin:10px 0 0"><button data-open="S4">Open the access request task</button> <button data-copymsg="S4">Copy the access request message</button></p></div>
+    <div class="card"><h2>Order of work</h2>${P.phases.map((ph) => `<div class="pb-phase"><div><b>${esc(ph.when)}</b><span class="tag">${esc(ph.title)}</span></div><ul class="clean">${ph.items.map((i) => {
+        const m = i.match(/\(([A-Z]\d+)(?:,\s*([A-Z]\d+))?\)/); const id = m && m[1];
+        return `<li>${esc(i)}${id ? ` <button class="dep" data-open="${id}" style="padding:1px 6px;font-size:11px">open</button>` : ''}</li>`; }).join('')}</ul></div>`).join('')}</div>
+    <div class="card"><h2>Decision points</h2><table><thead><tr><th>Question</th><th>How you'll know</th><th>What happens then</th></tr></thead><tbody>
+      ${P.decisions.map((x) => `<tr><td><b>${esc(x.q)}</b></td><td>${rich(x.how)}</td><td>${rich(x.then)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="card"><h2>Rules you never break</h2>${P.rules.map((r) => `<div class="rule">${rich(r)}</div>`).join('')}</div>`;
+}
+
+function viewClient() {
+  const C = D.client, p = C.profile;
+  const waiting = D.tasks.filter((t) => t.owner === 'aoife' && !['done', 'skipped'].includes(t.status));
+  return `<h1>Client: ${esc(p.name)}</h1><p class="sub">How to look after the relationship, not just the tasks.</p>
+    <div class="grid2">
+      <div class="card"><h2>Who she is</h2><div class="kv">
+        <div><b>Role</b>${esc(p.role)}</div><div><b>Company</b>${esc(p.company)}</div><div><b>Time zone</b>${esc(p.timezone)}</div>
+        <div><b>Best channel</b>${esc(p.channel)}</div><div><b>Her team</b>${esc(p.team)}</div><div><b>How she works</b>${esc(p.style)}</div><div><b>Preferences</b>${esc(p.preferences)}</div></div></div>
+      <div class="card"><h2>Waiting on her</h2>${waiting.length ? waiting.map((t) => row(t)).join('') : '<div class="empty">Nothing waiting.</div>'}
+        <div class="sec">Rhythm</div><table><tbody>${C.cadence.map((c) => `<tr><td><b>${esc(c.when)}</b></td><td>${esc(c.what)}</td><td style="color:var(--muted)">${c.from ? 'from ' + esc(c.from) : ''}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="card"><h2>How to manage this relationship</h2><ol class="clean">${C.principles.map((x) => `<li><b>${esc(x.t)}.</b> ${esc(x.d)}</li>`).join('')}</ol></div>
+    <div class="card"><h2>Message templates <small>copy, fill the [..], send</small></h2>${C.templates.map((x, i) => `<div class="tpl"><div class="head"><div><b>${esc(x.t)}</b> <span class="tag">${esc(x.when)}</span></div><button data-copytpl="${i}">Copy</button></div><pre>${esc(x.text)}</pre></div>`).join('')}</div>
+    <div class="card"><h2>Contact log <small>every decision, payment and important message</small></h2>
+      <div class="form"><select id="logKind">${['Message', 'Decision', 'Document', 'Payment', 'Security', 'Feedback', 'Call'].map((k) => `<option>${k}</option>`).join('')}</select>
+        <textarea id="logText" placeholder="What happened? For example: the client approved the landing page copy."></textarea><button class="primary" id="addLog">Add</button></div>
+      <div class="log">${(C.log || []).map((l) => `<div><small>${fmt(l.date)}</small><span class="tag">${esc(l.kind)}</span> ${esc(l.text)}</div>`).join('')}</div></div>`;
+}
+
+function inboxTitle(key) {
+  if (key === 'general') return 'General messages';
+  const [kind, id] = key.split(':');
+  if (kind === 'task') { const t = task(id); return t ? `${id} · ${t.title}` : key; }
+  if (kind === 'access') { const a = D.access.find((x) => x.id === id); return a ? `Access · ${a.item}` : key; }
+  if (kind === 'phase') { const p = D.phases.find((x) => x.id === id); return p ? `Phase · ${p.name}` : key; }
+  if (kind === 'q') { if (id === 'all') return 'Questions · answered all at once (and date changes)'; const q = (D.trackerQuestions || []).find((x) => x.id === id); return q ? `Question · ${q.q}` : key; }
+  if (kind === 'doc') { const d = (D.trackerDocs || []).find((x) => x.id === id); return d ? `Document · ${d.title}` : key; }
+  return key;
+}
+async function loadInbox() {
+  try {
+    state.inbox = await (await fetch('/api/feedback', { cache: 'no-store' })).json();
+    if (state.view === 'inbox') render();
+    const ids = state.inbox.items.filter((m) => m.unread).map((m) => m.id);
+    if (ids.length && state.view === 'inbox') setTimeout(() => fetch('/api/feedback/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) }).then(() => refresh()), 2500);
+  } catch { toast('Could not load the inbox'); }
+}
+function viewInbox() {
+  const I = state.inbox;
+  if (!I) { loadInbox(); return '<h1>Inbox</h1><p class="sub">Loading…</p>'; }
+  const groups = new Map();
+  for (const m of I.items) { if (!groups.has(m.item)) groups.set(m.item, []); groups.get(m.item).push(m); }
+  const order = [...groups.entries()].sort((a, b) => String(b[1][b[1].length - 1].at).localeCompare(String(a[1][a[1].length - 1].at)));
+  const tag = (m) => (m.kind === 'approval' ? '<span class="tag" style="background:var(--greensoft);color:var(--green)">Approved</span>' : m.kind === 'signature' ? '<span class="tag" style="background:var(--greensoft);color:var(--green)">Signed</span>' : m.kind === 'signed-doc' ? '<span class="tag" style="background:var(--greensoft);color:var(--green)">Signed copy uploaded</span>' : m.kind === 'due' ? `<span class="tag">New date: ${esc(m.due || '')}</span>` : '');
+  return `<h1>Inbox</h1><p class="sub">Comments, screenshots, voice notes, approvals and signatures from the client's tracker. ${I.connected ? 'Stored online (encrypted).' : 'Stored on this Mac until the comments Worker is connected in S14.'} Reply the same working day.</p>
+    ${order.length ? order.map(([key, msgs]) => `<div class="card"><h2>${esc(inboxTitle(key))} ${key.startsWith('task:') ? `<button data-open="${key.slice(5)}">Open task</button>` : ''}</h2>
+      ${msgs.map((m) => `<div class="im ${m.role === 'lead' ? 'me' : ''} ${m.unread ? 'new' : ''}"><div class="im-h"><b>${esc(m.author)}</b><small>${new Date(m.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</small>${tag(m)}${m.unread ? '<span class="tag P1">new</span>' : ''}</div>
+        ${m.text ? `<div class="im-t">${esc(m.text)}</div>` : ''}
+        ${m.files.map((f) => (/^image\//.test(f.type) ? `<a href="${f.url}" target="_blank" rel="noopener"><img class="im-img" src="${f.url}" alt="Attachment"></a>` : /^audio\//.test(f.type) ? `<audio controls src="${f.url}"></audio>` : `<p style="margin:8px 0 0"><a href="${f.url}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">Open ${esc(f.name || 'file')} ↗</a></p>`)).join('')}
+        ${m.kind === 'signature' ? `<p style="margin:10px 0 0"><button class="primary" data-mksign="${m.id}">Make the signed PDF</button> ${D.signedPdf ? '<a href="/api/signed-scope.pdf" target="_blank" rel="noopener" style="margin-left:6px;color:var(--blue);font-weight:600">Open signed PDF ↗</a>' : ''} <small style="color:var(--muted);margin-left:6px">Then: tick S1 when the payment arrives, and send her the PDF.</small></p>` : ''}
+      </div>`).join('')}
+      <div class="form" style="margin-top:12px"><textarea data-replytext="${esc(key)}" placeholder="Reply to the client. She'll see it on the tracker."></textarea><button class="primary" data-reply="${esc(key)}">Reply</button></div></div>`).join('') : '<div class="card empty">No messages yet. When the client comments on the tracker, it shows up here.</div>'}`;
+}
+
+function viewUpdates() {
+  return `<h1>Updates</h1><p class="sub">Shared updates appear on the client's board. Private ones stay with you.</p>
+    <div class="card"><div class="form"><textarea id="updText" placeholder="One plain-English line. For example: Landing page is live in English and Arabic."></textarea>
+      <select id="updVis"><option value="shared">Shared with the client</option><option value="private">Private</option></select><button class="primary" id="addUpd">Add</button></div>
+      <div class="log">${D.updates.map((u) => `<div><small>${fmt(u.date)}</small>${u.visibility === 'private' ? '<span class="tag priv">private</span>' : '<span class="tag">shared</span>'} ${esc(u.text)}</div>`).join('')}</div></div>`;
+}
+
+function promptFor(t) {
+  if (t.prompt) return `${t.prompt}\n\n(Task ${t.id} in alurei-ops. When it's finished, tick it done in the desk.)`;
+  return `Read CLAUDE.md first. Then help me with task ${t.id}: ${t.title}.${t.deliverable ? ` The deliverable is: ${t.deliverable}.` : ''} Walk me through the steps in its brief one at a time, and wait for my output before moving on.`;
+}
+
+function openItem(id, keepScroll) {
+  const t = task(id); if (!t) return;
+  state.open = id;
+  const b = t.brief || {}, isTask = !!t.phase, p = isTask ? phase(t) : null;
+  const scroll = keepScroll ? $('#dbody').scrollTop : 0;
+  const done = new Set(t.stepsDone || []);
+  $('#dtop').innerHTML = `<div style="flex:1"><div class="eyebrow">${t.id}${p ? ' · ' + esc(p.name) : ' · Regular task'}</div><h2>${esc(t.title)}</h2>
+    <div class="chips">${isTask ? `<span class="tag">${range(t)}</span><span class="tag">${OWNERS[t.owner] || t.owner}</span><span class="tag">${t.est || 0} h</span><span class="tag ${t.priority}">${t.priority}</span>` : ''}
+      ${t.visibility === 'private' ? '<span class="tag priv">private</span>' : '<span class="tag">shared with the client</span>'}${isTask && isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${t.client && t.client !== t.title ? `<span class="tag" title="What the client sees">the client sees: ${esc(t.client)}</span>` : ''}</div></div>
+    <button class="close" id="closeDrawer" aria-label="Close">×</button>`;
+  const list = (arr) => `<ul class="clean">${arr.map((x) => `<li>${rich(x)}</li>`).join('')}</ul>`;
+  let html = '';
+  if (isTask) html += `<div class="seg">${STATUS.map(([k, l]) => `<button data-status="${k}" class="${t.status === k ? 'on ' + k : ''}">${l}</button>`).join('')}</div>`;
+  if (b.why) html += `<div class="dsec"><h3>Why this matters</h3><p>${rich(b.why)}</p></div>`;
+  if (t.deliverable) html += `<div class="dsec"><h3>Deliverable</h3><p>${rich(t.deliverable)}</p></div>`;
+  if (b.steps?.length) html += `<div class="dsec"><h3>Steps <span style="text-transform:none;letter-spacing:0">${isTask ? `${done.size} of ${b.steps.length} done` : ''}</span></h3><ol class="steps">${b.steps.map((s, i) => `<li class="${done.has(i) ? 'ok' : ''}">
+      ${isTask ? `<input type="checkbox" data-step="${i}" ${done.has(i) ? 'checked' : ''}>` : `<span class="n">${i + 1}.</span>`}
+      <div><b><span class="n">${i + 1}.</span>${rich(s.t)}</b>${s.d ? `<div class="sd">${rich(s.d)}</div>` : ''}</div></li>`).join('')}</ol></div>`;
+  if (b.ask?.length) html += `<div class="dsec"><h3>What to ask <button data-copy="ask">Copy</button></h3>${list(b.ask)}</div>`;
+  if (b.message) html += `<div class="dsec"><h3>Message to send <button data-copy="message">Copy message</button></h3><div class="msg">${esc(b.message)}</div></div>`;
+  if (b.doneWhen?.length) html += `<div class="dsec"><h3>Done when</h3>${list(b.doneWhen)}</div>`;
+  if (b.watch?.length) html += `<div class="dsec"><h3>Watch out</h3><div class="box warn">${list(b.watch)}</div></div>`;
+  if (b.client) html += `<div class="dsec"><h3>Client tip</h3><div class="box tip">${rich(b.client)}</div></div>`;
+  if (isTask) html += `<div class="dsec"><h3>Claude Code prompt <button data-copy="prompt">Copy prompt</button></h3><div class="msg">${esc(promptFor(t))}</div></div>`;
+  if (t.depends?.length) html += `<div class="dsec"><h3>Depends on</h3>${t.depends.map((d) => { const x = task(d); return `<button class="dep" data-open="${d}">${d} · ${esc(x ? x.title : '')}${x && x.status === 'done' ? ' ✓' : ''}</button>`; }).join('')}</div>`;
+  if (isTask) html += `<div class="dsec"><h3>Your notes <button data-save="note">Save</button></h3><textarea id="noteText" placeholder="Anything to remember: what she said, what's blocked, links...">${esc(t.note || '')}</textarea></div>`;
+  $('#dbody').innerHTML = html;
+  $('#dbody').scrollTop = scroll;
+  $('#drawer').classList.add('on'); $('#scrim').classList.add('on'); $('#drawer').setAttribute('aria-hidden', 'false');
+}
+function closeDrawer() { state.open = null; $('#drawer').classList.remove('on'); $('#scrim').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); }
+
+function toast(m) { const el = $('#toast'); el.textContent = m; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); }
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('Copied');
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target;
+  const doneBox = el.closest('[data-done]');
+  if (doneBox) { e.stopPropagation(); const id = doneBox.dataset.done; return act('/api/task', { id, status: doneBox.checked ? 'done' : 'todo' }, doneBox.checked ? `${id} done` : `${id} reopened`); }
+  const stepBox = el.closest('[data-step]');
+  if (stepBox) return act('/api/step', { id: state.open, index: Number(stepBox.dataset.step), done: stepBox.checked }, stepBox.checked ? 'Step done' : 'Step reopened');
+  const st = el.closest('[data-status]');
+  if (st) return act('/api/task', { id: state.open, status: st.dataset.status }, 'Status saved');
+  const cp = el.closest('[data-copy]');
+  if (cp) { const t = task(state.open); const b = t.brief || {}; return copy(cp.dataset.copy === 'prompt' ? promptFor(t) : cp.dataset.copy === 'ask' ? b.ask.join('\n') : b.message); }
+  const cm = el.closest('[data-copymsg]');
+  if (cm) return copy(task(cm.dataset.copymsg).brief.message);
+  const ct = el.closest('[data-copytpl]');
+  if (ct) return copy(D.client.templates[Number(ct.dataset.copytpl)].text);
+  if (el.closest('[data-save="note"]')) return act('/api/note', { id: state.open, note: $('#noteText').value }, 'Note saved');
+  if (el.closest('#closeDrawer') || el.id === 'scrim') return closeDrawer();
+  const op = el.closest('[data-open]');
+  if (op && !el.closest('select')) return openItem(op.dataset.open);
+  const nv = el.closest('#nav button');
+  if (nv) { state.view = nv.dataset.view; if (state.view === 'inbox') state.inbox = null; return render(); }
+  const tg = el.closest('[data-toggle]');
+  if (tg) { const id = tg.dataset.toggle; state.closedPhases.has(id) ? state.closedPhases.delete(id) : state.closedPhases.add(id); return render(); }
+  if (el.closest('[data-goinbox]')) { state.view = 'inbox'; state.inbox = null; return render(); }
+  const rp = el.closest('[data-reply]');
+  if (rp) { const key = rp.dataset.reply, ta = document.querySelector(`[data-replytext="${CSS.escape(key)}"]`), text = ta.value.trim(); if (!text) return toast('Write a reply first'); rp.disabled = true; return api('/api/feedback/reply', { item: key, text }).then(() => { toast('Reply sent'); state.inbox = null; render(); }).catch((e) => { rp.disabled = false; toast(e.message); }); }
+  const mk = el.closest('[data-mksign]');
+  if (mk) { mk.disabled = true; mk.textContent = 'Making the PDF…'; return api('/api/sign-scope', { id: mk.dataset.mksign }).then((r) => { toast(r.versionMatches ? 'Signed PDF ready' : 'Signed PDF ready, but the scope changed after signing: check it'); return refresh(); }).then(() => window.open('/api/signed-scope.pdf', '_blank')).catch((e) => { toast(e.message); mk.disabled = false; mk.textContent = 'Make the signed PDF'; }); }
+  if (el.id === 'previewBtn') { const w = window.open('', '_blank'); return api('/api/share', {}).then((r) => { if (r.preview || r.url) w.location = r.preview || r.url; else { w.close(); toast(r.why); } }).catch((e) => { w.close(); toast(e.message); }); }
+  if (el.id === 'syncPill') { toast('Saving…'); return act('/api/sync', {}, null).then(() => toast(D.sync.detail)); }
+  if (el.id === 'deskLinkBtn') return api('/api/desklink').then((r) => r.url ? copy(r.url).then(() => toast('Your live desk link is copied. Keep it private.')) : toast(r.why || 'Not ready yet')).catch((e) => toast(e.message));
+  if (el.id === 'shareBtn') return api('/api/share', {}).then((r) => r.url ? copy(r.url).then(() => toast(r.live ? "the client's link copied" : 'Preview link copied (this Mac only until S14)')) : toast(r.why)).catch((e) => toast(e.message));
+  if (el.id === 'addLog') { const text = $('#logText').value.trim(); if (text) act('/api/log', { kind: $('#logKind').value, text }, 'Logged'); return; }
+  if (el.id === 'addUpd') { const text = $('#updText').value.trim(); if (text) act('/api/update', { text, visibility: $('#updVis').value }, 'Update added'); return; }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset.access) return act('/api/access', { id: el.dataset.access, status: el.value }, 'Saved');
+  if (el.id === 'showDone') { state.showDone = el.checked; return render(); }
+  if (el.id === 'flagFeatures') return act('/api/flag', { name: 'features', value: el.value === 'true' ? true : el.value === 'false' ? false : null }, 'Decision saved');
+});
+document.addEventListener('input', (e) => { if (e.target.id === 'q') { state.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+$('#prev').onclick = () => { state.day = addDays(state.day, -1); refresh(); };
+$('#next').onclick = () => { state.day = addDays(state.day, 1); refresh(); };
+$('#todayBtn').onclick = () => { state.day = localToday(); refresh(); };
+
+if (location.protocol === 'file:') {
+  $('#view').innerHTML = `<div class="offline card"><h1>Start the desk first</h1><p>In Terminal, go to the alurei-ops folder and run:</p><p><code>node scripts/serve.mjs</code></p><p>Then open <b>http://localhost:8765</b>.</p></div>`;
+} else {
+  refresh().catch((e) => { if (window.LIVE_DESK) { $('#view').innerHTML = `<div class="offline card"><h1>Can't open the live desk</h1><p>${esc(e.message)}</p></div>`; return; } $('#view').innerHTML = `<div class="offline card"><h1>Can't reach the desk</h1><p>${esc(e.message)}</p><p>Run <code>node scripts/serve.mjs</code> in the alurei-ops folder.</p></div>`; });
+  setInterval(() => { const a = document.activeElement; if (!a || !['TEXTAREA', 'INPUT', 'SELECT'].includes(a.tagName)) refresh().catch(() => {}); }, 30000);
+}
+</script>
+</body>
+</html>
