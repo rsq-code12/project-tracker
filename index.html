@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Project tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#FBFBFA; --surface:#FFFFFF; --hover:#F6F6F4; --ink:#0F1115; --ink2:#414854; --muted:#737B87; --faint:#A6ACB5;
+    --line:#EBEBE8; --line2:#F2F2EF; --track:#EEEEEB;
+    --accent:#2F5BEA; --accentSoft:#EEF2FE; --good:#12805C; --goodSoft:#E9F5EF; --warn:#B45309; --warnSoft:#FDF4E7; --bad:#C2410C; --badSoft:#FDEDE6;
+    --sans:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0B0C0F; --surface:#121418; --hover:#181B20; --ink:#ECEEF2; --ink2:#C2C7D0; --muted:#8A919C; --faint:#5E6570;
+      --line:#22252C; --line2:#1B1E24; --track:#22262D;
+      --accent:#7D9BFF; --accentSoft:#1A2140; --good:#47C58F; --goodSoft:#10241B; --warn:#F2B25C; --warnSoft:#2A2012; --bad:#F38B69; --badSoft:#2C1812;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; letter-spacing: -.005em; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; letter-spacing: inherit; }
+  button:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+  button:disabled { opacity: .55; cursor: default; }
+  svg { display: block; flex: none; }
+  .page { max-width: 760px; margin: 0 auto; padding: 0 20px 48px; }
+
+  /* Top */
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 0 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14.5px; min-width: 0; }
+  .mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 14px; flex: none; }
+  .brand span:last-child { color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .live { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--good); animation: pulse 2.4s infinite; }
+  .live.flash { color: var(--good); }
+  .live.stale .pulse { background: var(--faint); animation: none; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18,128,92,.45); } 70% { box-shadow: 0 0 0 7px rgba(18,128,92,0); } 100% { box-shadow: 0 0 0 0 rgba(18,128,92,0); } }
+  .quick { display: flex; gap: 6px; margin: 18px -20px 0; padding: 0 20px 2px; overflow-x: auto; scrollbar-width: none; }
+  .quick::-webkit-scrollbar { display: none; }
+  .qb { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; transition: border-color .12s; }
+  .qb:hover { border-color: var(--ink2); color: var(--ink); }
+  .qb svg { width: 15px; height: 15px; color: var(--muted); }
+  .qb.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); margin-left: auto; }
+  .qb.primary svg { color: var(--bg); }
+  .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--warnSoft); color: var(--warn); font-size: 11.5px; font-weight: 700; display: inline-grid; place-items: center; }
+
+  /* Status */
+  .status { padding: 38px 0 28px; }
+  .health { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--good); }
+  .health i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .health.warn { color: var(--warn); }
+  h1 { font-size: clamp(28px, 6vw, 38px); line-height: 1.12; letter-spacing: -.03em; font-weight: 600; margin: 10px 0 8px; }
+  .meta { color: var(--muted); font-size: 15px; margin: 0; }
+  .meta b { color: var(--ink2); font-weight: 500; }
+  .prog { margin-top: 24px; }
+  .bar { display: block; height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--ink); transition: width .6s ease; }
+  .prog-l { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+  .prog-l b { color: var(--ink); font-weight: 600; }
+
+  /* Sections */
+  .sec-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 32px 0 10px; }
+  .sec-h h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; white-space: nowrap; }
+  .sec-h button, .sec-h span { font-size: 13px; color: var(--muted); font-weight: 500; text-align: right; }
+  .sec-h button:hover { color: var(--ink); }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .box.need { border-color: color-mix(in srgb, var(--warn) 28%, var(--line)); }
+  .need-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px 6px; font-weight: 600; font-size: 14.5px; }
+  .more { display: block; width: 100%; padding: 12px 16px 14px; font-size: 13.5px; color: var(--muted); font-weight: 500; border-top: 1px solid var(--line2); }
+  .more:hover { color: var(--ink); background: var(--hover); }
+
+  /* Rows */
+  .row { width: 100%; display: grid; grid-template-columns: 20px 1fr auto auto 14px; gap: 12px; align-items: center; padding: 13px 16px; transition: background .12s; }
+  .row + .row { border-top: 1px solid var(--line2); }
+  .row:hover { background: var(--hover); }
+  .row-t { font-size: 14.5px; font-weight: 500; line-height: 1.35; min-width: 0; }
+  .row-t small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .when { font-size: 13px; color: var(--muted); white-space: nowrap; text-align: right; }
+  .when.soon, .m-when.soon { color: var(--ink2); font-weight: 500; } .when.late, .m-when.late { color: var(--bad); font-weight: 500; } .when.done { color: var(--faint); }
+  .m-when { display: none; }
+  .cc { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--accent); font-weight: 600; }
+  .cc svg { width: 14px; height: 14px; }
+  .chev { width: 14px; height: 14px; color: var(--faint); }
+  .ic { width: 18px; height: 18px; }
+  .kind { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: var(--warnSoft); color: var(--warn); }
+  .kind svg { width: 12px; height: 12px; }
+  .kind.soon, .kind.doc { background: var(--track); color: var(--ink2); } .kind.done { background: var(--goodSoft); color: var(--good); }
+
+  /* Phase cards */
+  .pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .pc { display: flex; flex-direction: column; gap: 4px; min-height: 132px; padding: 14px 15px 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; transition: border-color .15s, transform .15s, box-shadow .15s; }
+  .pc:hover { border-color: var(--ink2); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.05); }
+  .pc.now { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 0 0 3px var(--accentSoft); }
+  .pc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pc-name { font-weight: 600; font-size: 15px; line-height: 1.3; margin-top: 2px; }
+  .pc-d { font-size: 12.5px; color: var(--muted); }
+  .pc-bot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .pc-bot b { color: var(--ink); font-weight: 600; }
+  .pc-bot .cc { margin-left: auto; }
+  .tag { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .tag.now { background: var(--accentSoft); color: var(--accent); } .tag.done { background: var(--goodSoft); color: var(--good); } .tag.next { color: var(--muted); padding: 0; font-weight: 500; }
+  .tag.warn { background: var(--warnSoft); color: var(--warn); }
+  .mring { width: 18px; height: 18px; transform: rotate(-90deg); }
+
+  /* Updates */
+  .up { width: 100%; display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 13px 16px; font-size: 14.5px; line-height: 1.5; }
+  .up + .up { border-top: 1px solid var(--line2); }
+  button.up:hover { background: var(--hover); }
+  .up time { font-size: 13px; color: var(--muted); padding-top: 1px; }
+  .up span { color: var(--ink2); }
+  .up em { font-style: normal; font-weight: 600; color: var(--ink); }
+  .up em.done { color: var(--good); }
+  footer { margin-top: 30px; font-size: 12.5px; color: var(--faint); line-height: 1.7; }
+
+  /* Panel */
+  .scrim { position: fixed; inset: 0; background: rgba(10,12,16,.32); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40; }
+  .scrim.on { opacity: 1; pointer-events: auto; }
+  .panel { position: fixed; top: 10px; right: 10px; bottom: 10px; width: min(540px, calc(100% - 20px)); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; z-index: 50; transform: translateX(calc(100% + 24px)); transition: transform .28s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0,0,0,.18); overflow: hidden; }
+  .panel.on { transform: none; }
+  .p-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px 0 14px; flex: none; }
+  .p-btn { height: 34px; min-width: 34px; padding: 0 10px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 13.5px; font-weight: 500; }
+  .p-btn:hover { background: var(--hover); color: var(--ink); }
+  .p-btn svg { width: 16px; height: 16px; }
+  .p-body { overflow-y: auto; padding: 8px 24px 40px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .p-eye { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .p-body h3 { font-size: 23px; line-height: 1.25; letter-spacing: -.02em; font-weight: 600; margin: 6px 0 18px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .props { margin: 0 0 22px; padding: 4px 0; border-top: 1px solid var(--line2); border-bottom: 1px solid var(--line2); }
+  .props div { display: grid; grid-template-columns: 104px 1fr; gap: 12px; padding: 9px 0; font-size: 14px; align-items: center; }
+  .props dt { color: var(--muted); }
+  .props dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .props .bar { flex: 1; min-width: 80px; max-width: 160px; height: 6px; }
+  .props .bar i { background: var(--accent); }
+  .blk { margin-bottom: 22px; }
+  .blk h4, .cm h4 { margin: 0 0 7px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .blk p { margin: 0; color: var(--ink2); font-size: 14.5px; line-height: 1.65; }
+  .ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+  .ul li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; font-size: 14.5px; color: var(--ink2); line-height: 1.55; }
+  .ul li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--faint); margin: 9px 0 0 4px; }
+  .ol { counter-reset: n; list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .ol li { counter-increment: n; display: grid; grid-template-columns: 24px 1fr; gap: 10px; font-size: 14.5px; color: var(--ink2); line-height: 1.55; }
+  .ol li::before { content: counter(n); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--track); color: var(--ink); font-size: 12px; font-weight: 600; margin-top: 1px; }
+  .note { border-radius: 14px; padding: 14px 16px; margin-bottom: 22px; }
+  .note h4 { margin: 0 0 7px; font-size: 13px; font-weight: 600; }
+  .note p { margin: 0; font-size: 14px; color: var(--ink2); line-height: 1.6; }
+  .note.warn { background: var(--warnSoft); } .note.warn h4 { color: var(--warn); } .note.warn .ul li::before { background: var(--warn); }
+  .note.good { background: var(--goodSoft); } .note.good h4 { color: var(--good); }
+  .note.info { background: var(--accentSoft); } .note.info h4 { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; max-width: 100%; }
+  .chip:hover { border-color: var(--ink2); }
+  .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .ic { width: 15px; height: 15px; }
+  .p-list { margin: 0 -24px 22px; }
+  .p-list .row, .p-list .up { padding-left: 24px; padding-right: 24px; }
+  .p-sub { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
+  .p-empty { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+  .person { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; margin-bottom: 18px; }
+  .avatar { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 15px; }
+  .person b { display: block; font-size: 15px; } .person span { color: var(--muted); font-size: 13.5px; }
+  .rh { display: grid; grid-template-columns: 150px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line2); font-size: 14px; }
+  .rh:first-child { border-top: 0; } .rh b { font-weight: 500; } .rh span { color: var(--ink2); }
+
+  /* Comments */
+  .cm { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .cm-note { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+  .cm-list { display: grid; gap: 10px; margin-bottom: 14px; }
+  .msg { padding: 11px 13px; border-radius: 14px; background: var(--hover); max-width: 92%; justify-self: start; }
+  .msg.me { background: var(--accentSoft); justify-self: end; }
+  .msg-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-bottom: 3px; }
+  .msg-h b { color: var(--ink); font-weight: 600; font-size: 13px; }
+  .msg p { margin: 0; font-size: 14.5px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+  .msg img { display: block; max-width: 100%; max-height: 240px; border-radius: 10px; margin-top: 8px; cursor: zoom-in; border: 1px solid var(--line); }
+  .msg audio, .att audio { display: block; width: 100%; max-width: 300px; height: 40px; margin-top: 8px; }
+  .ok-tag { background: var(--goodSoft); color: var(--good); font-weight: 600; padding: 1px 8px; border-radius: 99px; font-size: 11.5px; }
+  .cmp { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); transition: border-color .12s; }
+  .cmp:focus-within, .cmp.drag { border-color: var(--ink2); }
+  .cmp-name { display: block; width: 100%; border: 0; border-bottom: 1px solid var(--line2); background: transparent; padding: 11px 13px; font: inherit; font-size: 14px; color: var(--ink); outline: none; }
+  .cmp-text { display: block; width: 100%; min-height: 64px; border: 0; background: transparent; padding: 11px 13px; font: inherit; font-size: 14.5px; color: var(--ink); resize: vertical; outline: none; }
+  .cmp-files { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px; }
+  .cmp-files:not(:empty) { padding-bottom: 10px; }
+  .att { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--hover); }
+  .att img { display: block; height: 84px; max-width: 160px; object-fit: cover; }
+  .att.audio { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 4px; }
+  .att.audio audio { margin: 0; width: 220px; }
+  .att-a { position: absolute; inset: auto 4px 4px 4px; display: flex; justify-content: space-between; }
+  .att-a button { height: 24px; padding: 0 8px; border-radius: 99px; background: rgba(15,17,21,.75); color: #fff; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; }
+  .att.audio button { height: 24px; width: 24px; border-radius: 99px; background: var(--track); color: var(--ink2); display: inline-grid; place-items: center; }
+  .att-a button svg, .att.audio button svg { width: 12px; height: 12px; }
+  .cmp-bar { display: flex; align-items: center; gap: 4px; padding: 6px 8px 8px; border-top: 1px solid var(--line2); flex-wrap: wrap; }
+  .cmp-b { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 99px; color: var(--ink2); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+  .cmp-b:hover { background: var(--hover); color: var(--ink); }
+  .cmp-b svg { width: 16px; height: 16px; }
+  .cmp-b.rec { background: var(--badSoft); color: var(--bad); }
+  .cmp-b.rec b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .rdot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .cmp-b.ok { color: var(--good); } .cmp-b.ok.armed { background: var(--good); color: #fff; }
+  .cmp-send { margin-left: auto; height: 34px; padding: 0 16px; border-radius: 99px; background: var(--ink); color: var(--bg); font-size: 13.5px; font-weight: 600; }
+  .ovl { position: fixed; inset: 0; z-index: 80; background: rgba(8,10,14,.82); display: grid; place-items: center; padding: 20px; }
+  .ovl > img { max-width: 100%; max-height: 100%; border-radius: 10px; cursor: zoom-out; }
+  .crop { background: var(--surface); border-radius: 18px; padding: 16px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .crop p { margin: 0; font-size: 14px; color: var(--ink2); }
+  .crop-area { position: relative; display: inline-block; line-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; align-self: center; }
+  .crop-area img { max-width: min(86vw, 900px); max-height: 62vh; border-radius: 8px; pointer-events: none; }
+  .crop-sel { position: absolute; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); border-radius: 4px; }
+  .crop-bar { display: flex; justify-content: flex-end; gap: 8px; }
+  .crop-bar button:first-child { height: 34px; padding: 0 14px; border-radius: 99px; color: var(--ink2); }
+  .crop-bar .cmp-send { margin-left: 0; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 90; max-width: calc(100% - 32px); text-align: center; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Sign + pay */
+  .action { border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 22px; background: var(--surface); }
+  .action.todo { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: 0 0 0 3px var(--accentSoft); }
+  .action.done { background: var(--goodSoft); border-color: transparent; }
+  .action-h { display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center; }
+  .action-ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accentSoft); color: var(--accent); }
+  .action.done .action-ic { background: var(--good); color: #fff; }
+  .action-ic svg { width: 18px; height: 18px; }
+  .action-h b { display: block; font-size: 15px; } .action-h span { font-size: 13.5px; color: var(--muted); }
+  .action-b { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .action-n { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 99px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; text-decoration: none; border: 1px solid var(--ink); white-space: nowrap; }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .sign { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: flex; flex-direction: column; }
+  .sign-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .steps { display: flex; gap: 4px; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .steps span { padding: 4px 10px; border-radius: 99px; white-space: nowrap; } .steps span.on { background: var(--ink); color: var(--bg); } .steps span.ok { color: var(--good); }
+  .sign-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .sign-foot { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); flex-wrap: wrap; }
+  .sign-foot .hint { margin-right: auto; font-size: 13px; color: var(--muted); }
+  .doc { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; font-size: 15px; line-height: 1.65; color: var(--ink2); }
+  .doc h1 { font-size: 28px; color: var(--ink); letter-spacing: -.02em; margin: 0 0 4px; } .doc h2 { font-size: 19px; color: var(--ink); margin: 30px 0 8px; letter-spacing: -.01em; } .doc h3 { font-size: 16px; color: var(--ink); margin: 20px 0 6px; }
+  .doc p { margin: 0 0 12px; } .doc ul, .doc ol { padding-left: 22px; margin: 0 0 12px; } .doc li { margin-bottom: 4px; }
+  .doc table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 14px; display: block; overflow-x: auto; }
+  .doc th, .doc td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  .doc th { background: var(--hover); color: var(--ink); }
+  .doc hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+  .doc a { color: var(--accent); } .doc strong { color: var(--ink); }
+  .doc svg { max-width: 100%; height: auto; }
+  .doc .sig-img { height: 56px; display: block; background: #fff; border-radius: 6px; padding: 2px 6px; }
+  .doc tr.sig-hl td { background: var(--warnSoft); }
+  .doc .esig { font-size: 12.5px; color: var(--muted); }
+  .pad-wrap { max-width: 560px; margin: 0 auto; padding: 26px 20px; }
+  .pad-wrap h2 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 4px; } .pad-wrap > p { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; padding: 3px; margin-bottom: 12px; }
+  .seg button { padding: 6px 14px; border-radius: 99px; font-size: 13.5px; font-weight: 500; color: var(--muted); } .seg button.on { background: var(--ink); color: var(--bg); }
+  .pad { position: relative; border: 1px solid var(--line); border-radius: 14px; background: #fff; touch-action: none; }
+  .pad canvas { display: block; width: 100%; height: 200px; border-radius: 14px; cursor: crosshair; touch-action: none; }
+  .pad::after { content: ''; position: absolute; left: 24px; right: 24px; bottom: 50px; border-bottom: 1px dashed #CBD0D6; pointer-events: none; }
+  .pad-x { position: absolute; top: 8px; right: 8px; font-size: 12.5px; color: #4B5563; padding: 4px 10px; border-radius: 99px; background: #F3F4F6; z-index: 1; }
+  .field { display: block; margin-top: 14px; } .field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .field input { width: 100%; height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; font: inherit; color: var(--ink); background: var(--surface); outline: none; } .field input:focus { border-color: var(--ink2); }
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink2); margin-right: auto; max-width: 520px; cursor: pointer; } .consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ink); flex: none; }
+  .done-wrap { max-width: 480px; margin: 0 auto; padding: 48px 20px; text-align: center; }
+  .done-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--good); color: #fff; display: grid; place-items: center; margin: 0 auto 18px; } .done-ic svg { width: 30px; height: 30px; }
+  .done-wrap h2 { font-size: 24px; letter-spacing: -.02em; margin: 0 0 8px; } .done-wrap > p { color: var(--ink2); margin: 0 0 22px; }
+  .pay-card { border: 1px solid var(--line); border-radius: 16px; padding: 18px; text-align: left; background: var(--surface); }
+  .pay-card b { display: block; font-size: 15px; } .pay-card span { display: block; font-size: 13.5px; color: var(--muted); margin: 2px 0 14px; }
+  @media (max-width: 640px) { .steps span { padding: 4px 7px; } .sign-foot .hint { display: none; } .consent { flex-basis: 100%; } }
+
+  .msg-page { max-width: 420px; margin: 22vh auto; text-align: center; padding: 0 20px; }
+  .msg-page h1 { font-size: 26px; } .msg-page p { color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .page { padding: 0 16px 40px; }
+    .quick { margin: 16px -16px 0; padding: 0 16px 2px; }
+    .qb.primary { margin-left: 0; order: -1; }
+    .status { padding: 30px 0 22px; }
+    .row { padding: 13px 14px; grid-template-columns: 20px 1fr auto 14px; }
+    .row > .when { display: none; }
+    .m-when { display: inline; }
+    .sec-h span { display: none; }
+    .pcards { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pc { min-height: 124px; padding: 12px 12px 11px; border-radius: 14px; }
+    .pc-name { font-size: 14px; }
+    .pc-top .tag.next { display: none; }
+    .up { grid-template-columns: 56px 1fr; padding: 13px 14px; }
+    .panel { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-height: 92vh; border-radius: 20px 20px 0 0; transform: translateY(105%); }
+    .panel.on { transform: none; }
+    .p-bar::before { content: ''; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 36px; height: 4px; border-radius: 4px; background: var(--line); }
+    .p-body { padding: 6px 18px 32px; }
+    .p-list { margin: 0 -18px 20px; } .p-list .row, .p-list .up { padding-left: 18px; padding-right: 18px; }
+    .props div { grid-template-columns: 88px 1fr; }
+    .rh { grid-template-columns: 1fr; gap: 0; }
+    .cmp-b span { display: none; } .cmp-b.rec span, .cmp-b.ok.armed span { display: inline; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="msg-page"><h1>Loading…</h1><p>Getting the latest progress.</p></div></div>
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-hidden="true"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const D = (s) => new Date(s + 'T00:00:00Z');
+const fmtO = (s, o) => (s ? D(s).toLocaleDateString('en-GB', { ...o, timeZone: 'UTC' }) : '');
+const fmt = (s) => fmtO(s, { day: 'numeric', month: 'short' });
+const fmtW = (s) => fmtO(s, { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtL = (s) => fmtO(s, { weekday: 'long', day: 'numeric', month: 'long' });
+const dayName = (s) => fmtO(s, { weekday: 'long' });
+const diff = (a, b) => Math.round((D(b) - D(a)) / 864e5);
+const addDays = (s, n) => { const d = D(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const todayStr = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+const fmtDur = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+const TEAM = ['client', 'dev', 'automation'];
+const ACCESS = { todo: 'Coming up', asked: 'Requested', waiting: 'Waiting on you', received: 'Received', 'not needed': 'Not needed' };
+const P = {
+  chev: '<path d="M7.5 4.5 13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  back: '<path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  x: '<path d="M5.5 5.5l9 9M14.5 5.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  key: '<circle cx="7" cy="12.5" r="3.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.4 10.1 16 3.5m-2.6 2.6 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  user: '<circle cx="10" cy="7" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 17c.8-3 3.2-4.6 6-4.6s5.2 1.6 6 4.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pen: '<path d="M4 16.2l.9-3.8 8.6-8.6a1.9 1.9 0 0 1 2.7 2.7L7.6 15.1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  check: '<path d="M4.5 10.5l3.6 3.5 7.4-8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  info: '<circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 9v4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="6.4" r="1" fill="currentColor"/>',
+  list: '<path d="M7 5.5h9M7 10h9M7 14.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="5.5" r="1" fill="currentColor"/><circle cx="4" cy="10" r="1" fill="currentColor"/><circle cx="4" cy="14.5" r="1" fill="currentColor"/>',
+  clock: '<circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 6v4.2l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  doc: '<path d="M5.5 2.8h6l3.5 3.5v10.4a.8.8 0 0 1-.8.8H5.5a.8.8 0 0 1-.8-.8V3.6a.8.8 0 0 1 .8-.8z M11.3 2.8v3.7H15 M7.5 10.5h5M7.5 13.5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>',
+  chat: '<path d="M4 5.6A1.6 1.6 0 0 1 5.6 4h8.8A1.6 1.6 0 0 1 16 5.6v5.8a1.6 1.6 0 0 1-1.6 1.6H9.2L6 16v-3H5.6A1.6 1.6 0 0 1 4 11.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  image: '<rect x="3" y="4" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="7.5" cy="8.3" r="1.4" fill="currentColor"/><path d="M3.5 14.5l4.2-4 3 2.8 2.3-2 3.5 3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  mic: '<rect x="7.3" y="2.8" width="5.4" height="9" rx="2.7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 9.6a5.4 5.4 0 0 0 10.8 0M10 15v2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+};
+const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
+
+let B = null, C = null, lastGen = null, today = todayStr();
+const ui = { stack: [] };
+
+/* ---------- Data ---------- */
+function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - (s.length % 4)) % 4); return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); }
+function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+async function getData() {
+  const k = new URLSearchParams(location.hash.slice(1)).get('k');
+  if (k) {
+    const r = await fetch('board.enc.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('not-ready');
+    const e = await r.json();
+    let key;
+    try { key = await crypto.subtle.importKey('raw', b64(k), 'AES-GCM', false, ['decrypt']); } catch { throw new Error('bad-key'); }
+    try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(e.iv) }, key, b64(e.ct)))); } catch { throw new Error('bad-key'); }
+  }
+  const r = await fetch('board.json?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('no-key');
+  return r.json();
+}
+
+/* ---------- Comments: encrypted in this browser with the link's key ---------- */
+const FB = { on: false, base: '', space: '', key: null, k: '', msgs: new Map(), urls: new Map(), reason: '', sending: null };
+const drafts = {};
+const approvable = {};
+let rec = null, approveArm = null;
+const draft = (key) => (drafts[key] = drafts[key] || { text: '', files: [] });
+const myName = () => store.get('tracker.name') || '';
+async function fbInit() {
+  const k = new URLSearchParams(location.hash.slice(1)).get('k');
+  const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  FB.base = String(B.meta.feedbackUrl || (local ? '/fb' : '')).replace(/\/$/, '');
+  if (!k) { FB.on = false; FB.why = 'nokey'; FB.reason = 'Comments work from the private link.'; return; }
+  if (!FB.base) { FB.on = false; FB.why = 'setup'; FB.reason = 'Comments will be available here shortly.'; return; }
+  if (FB.k !== k) {
+    FB.key = await crypto.subtle.importKey('raw', b64(k), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', b64(k)));
+    FB.space = [...h].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    FB.k = k; FB.msgs.clear();
+  }
+  FB.on = true;
+}
+async function fbSync() {
+  if (!FB.on) return false;
+  try {
+    const r = await fetch(`${FB.base}/s/${FB.space}/m?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return false;
+    let added = false;
+    for (const it of (await r.json()).items || []) {
+      if (FB.msgs.has(it.id)) continue;
+      const x = await fetch(`${FB.base}/s/${FB.space}/m/${it.id}`);
+      if (!x.ok) continue;
+      try {
+        const e = await x.json();
+        const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(e.iv) }, FB.key, b64(e.ct));
+        FB.msgs.set(it.id, { id: it.id, ...JSON.parse(new TextDecoder().decode(pt)) });
+        added = true;
+      } catch { FB.msgs.set(it.id, null); }
+    }
+    return added;
+  } catch { return false; }
+}
+async function fbSend(msg) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, FB.key, new TextEncoder().encode(JSON.stringify(msg))));
+  const r = await fetch(`${FB.base}/s/${FB.space}/m`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ iv: toB64(iv), ct: toB64(ct) }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Could not send. Please try again.');
+  FB.msgs.set(j.id, { id: j.id, ...msg });
+}
+const thread = (key) => [...FB.msgs.values()].filter((m) => m && m.item === key).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+const countFor = (keys) => [...FB.msgs.values()].filter((m) => m && keys.includes(m.item)).length;
+const ccHtml = (n) => (n ? `<span class="cc" title="${plural(n, 'comment')}">${svg('chat')}${n}</span>` : '');
+function fileUrl(m, i) {
+  const k = `${m.id}:${i}`;
+  if (!FB.urls.has(k)) { const f = m.files[i]; const bin = atob(f.data); const u8 = new Uint8Array(bin.length); for (let j = 0; j < bin.length; j++) u8[j] = bin.charCodeAt(j); FB.urls.set(k, URL.createObjectURL(new Blob([u8], { type: f.type }))); }
+  return FB.urls.get(k);
+}
+function stampAt(iso) {
+  const d = new Date(iso), t = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString() ? `Today, ${t}` : `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${t}`;
+}
+function msgHtml(m) {
+  const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : '')).join('');
+  return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
+}
+const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'; };
+function filesHtml(key) {
+  return draft(key).files.map((f, i) => (/^image\//.test(f.type)
+    ? `<div class="att"><img src="${f.url}" alt="Image to send"><div class="att-a"><button data-act="crop" data-key="${key}" data-i="${i}">Crop</button><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove image">${svg('x')}</button></div></div>`
+    : `<div class="att audio"><audio controls src="${f.url}"></audio><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove voice note">${svg('x')}</button></div>`)).join('');
+}
+function composerHtml(key) {
+  const d = draft(key), r = rec && rec.key === key, s = FB.sending === key;
+  return `<div class="cmp" data-key="${key}">
+    ${myName() ? '' : '<input class="cmp-name" placeholder="Your name" maxlength="40" autocomplete="name">'}
+    <textarea class="cmp-text" rows="3" maxlength="4000" placeholder="Write a comment. You can paste a screenshot here too.">${esc(d.text)}</textarea>
+    <div class="cmp-files">${filesHtml(key)}</div>
+    <div class="cmp-bar">
+      <label class="cmp-b" title="Add an image">${svg('image')}<span>Image</span><input type="file" accept="image/*" multiple hidden data-pick="${key}"></label>
+      <button class="cmp-b ${r ? 'rec' : ''}" data-act="voice" data-key="${key}" title="Record a voice note">${r ? `<i class="rdot"></i><b class="rtime">${fmtDur((Date.now() - rec.t0) / 1000)}</b><span>Stop</span>` : `${svg('mic')}<span>Voice note</span>`}</button>
+      ${approvable[key] ? `<button class="cmp-b ok ${approveArm === key ? 'armed' : ''}" data-act="approve" data-key="${key}">${svg('check')}<span>${approveArm === key ? 'Tap again to approve' : 'Approve'}</span></button>` : ''}
+      <button class="cmp-send" data-act="send" data-key="${key}" ${s ? 'disabled' : ''}>${s ? 'Sending…' : 'Send'}</button>
+    </div></div>`;
+}
+function commentsHtml(key, canApprove, title = 'Comments') {
+  approvable[key] = !!canApprove;
+  if (!FB.on) return `<div class="cm"><h4>${title}</h4><p class="cm-note">${esc(FB.reason)}</p></div>`;
+  return `<div class="cm" data-cm="${key}"><h4>${title}</h4><div class="cm-list">${threadHtml(key)}</div>${composerHtml(key)}</div>`;
+}
+function paintComposer(key) { const el = document.querySelector(`.cmp[data-key="${CSS.escape(key)}"]`); if (el) el.outerHTML = composerHtml(key); }
+function paintThreads() { document.querySelectorAll('#panel .cm[data-cm]').forEach((el) => { $('.cm-list', el).innerHTML = threadHtml(el.dataset.cm); }); }
+const composing = () => !!rec || !!FB.sending || Object.values(drafts).some((d) => d.text.trim() || d.files.length) || !!(document.activeElement && document.activeElement.closest && document.activeElement.closest('.cmp'));
+
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+async function shrink(blob, max = 1800) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImg(url);
+    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    if (s === 1 && blob.size < 900 * 1024) return blob;
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob((b) => res(b || blob), 'image/jpeg', 0.88));
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addImages(key, files) {
+  for (const file of files) {
+    if (!file || !/^image\//.test(file.type)) continue;
+    try { const blob = await shrink(file); draft(key).files.push({ type: blob.type, name: file.name || 'Screenshot', blob, url: URL.createObjectURL(blob) }); }
+    catch { toast('Could not read that image'); }
+  }
+  paintComposer(key);
+}
+function openCrop(key, i) {
+  const f = draft(key).files[i]; if (!f) return;
+  const ov = document.createElement('div'); ov.className = 'ovl';
+  ov.innerHTML = `<div class="crop"><p>Drag over the part you want to keep.</p><div class="crop-area"><img src="${f.url}" alt="" draggable="false"><div class="crop-sel" hidden></div></div><div class="crop-bar"><button data-c="cancel">Cancel</button><button class="cmp-send" data-c="apply">Use selection</button></div></div>`;
+  document.body.appendChild(ov);
+  const area = $('.crop-area', ov), img = $('img', area), sel = $('.crop-sel', area);
+  let st = null, box = null;
+  const pt = (e) => { const r = img.getBoundingClientRect(); return { x: Math.min(Math.max(e.clientX - r.left, 0), r.width), y: Math.min(Math.max(e.clientY - r.top, 0), r.height) }; };
+  area.addEventListener('pointerdown', (e) => { e.preventDefault(); area.setPointerCapture(e.pointerId); st = pt(e); box = null; sel.hidden = true; });
+  area.addEventListener('pointermove', (e) => { if (!st) return; const p = pt(e); box = { x: Math.min(st.x, p.x), y: Math.min(st.y, p.y), w: Math.abs(p.x - st.x), h: Math.abs(p.y - st.y) }; Object.assign(sel.style, { left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px' }); sel.hidden = false; });
+  area.addEventListener('pointerup', () => { st = null; });
+  ov.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    if (b.dataset.c === 'apply') {
+      if (!box || box.w < 8 || box.h < 8) return toast('Drag over the image to choose an area first');
+      const sx = img.naturalWidth / img.clientWidth, sy = img.naturalHeight / img.clientHeight;
+      const c = document.createElement('canvas'); c.width = Math.round(box.w * sx); c.height = Math.round(box.h * sy);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, box.x * sx, box.y * sy, c.width, c.height, 0, 0, c.width, c.height);
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+      if (blob) { URL.revokeObjectURL(f.url); Object.assign(f, { blob, type: 'image/jpeg', url: URL.createObjectURL(blob) }); paintComposer(key); }
+    }
+    ov.remove();
+  });
+}
+async function toggleVoice(key) {
+  if (rec) { if (rec.key === key && rec.mr.state !== 'inactive') rec.mr.stop(); else toast('Finish the other voice note first'); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) return toast('Voice notes are not supported in this browser');
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return toast('Please allow the microphone to record a voice note'); }
+  const type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'].find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+  let mr;
+  try { mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 48000 } : undefined); } catch { mr = new MediaRecorder(stream); }
+  const chunks = [];
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    if (rec) clearInterval(rec.timer);
+    rec = null;
+    const blob = new Blob(chunks, { type: (mr.mimeType || type || 'audio/webm').split(';')[0] });
+    if (blob.size) draft(key).files.push({ type: blob.type, name: 'Voice note', blob, url: URL.createObjectURL(blob) });
+    paintComposer(key);
+  };
+  rec = { key, mr, t0: Date.now(), timer: setInterval(() => {
+    if (!rec) return;
+    const el = document.querySelector(`.cmp[data-key="${CSS.escape(key)}"] .rtime`);
+    if (el) el.textContent = fmtDur((Date.now() - rec.t0) / 1000);
+    if (Date.now() - rec.t0 > 180000 && rec.mr.state !== 'inactive') rec.mr.stop();
+  }, 500) };
+  mr.start(1000);
+  paintComposer(key);
+}
+async function sendMsg(key, kind) {
+  const d = draft(key);
+  const nameEl = document.querySelector(`.cmp[data-key="${CSS.escape(key)}"] .cmp-name`);
+  const name = (myName() || (nameEl && nameEl.value) || '').trim();
+  if (rec) return toast('Stop the voice note first');
+  if (!name) { toast('Please add your name first'); if (nameEl) nameEl.focus(); return; }
+  const text = d.text.trim();
+  if (kind === 'comment' && !text && !d.files.length) return toast('Write something, or add an image or a voice note');
+  const files = []; let total = 0;
+  for (const f of d.files) { const u8 = new Uint8Array(await f.blob.arrayBuffer()); total += u8.length; files.push({ type: f.type, name: f.name, data: toB64(u8) }); }
+  if (total > 8 * 1024 * 1024) return toast('That is too large. Try a shorter voice note or fewer images.');
+  store.set('tracker.name', name);
+  FB.sending = key; paintComposer(key);
+  try {
+    await fbSend({ v: 1, item: key, author: name, role: 'client', kind, text: text || (kind === 'approval' ? 'Approved' : ''), at: new Date().toISOString(), files });
+    d.files.forEach((f) => URL.revokeObjectURL(f.url));
+    delete drafts[key]; approveArm = null;
+    toast(kind === 'approval' ? 'Approved. Thank you!' : 'Sent. Replies usually come the same working day.');
+  } catch (e) { toast(e.message); }
+  FB.sending = null;
+  paintThreads(); paintComposer(key); paintPage();
+}
+
+/* ---------- Sign the scope, then pay ---------- */
+const SIGN = { el: null, doc: null, step: 'read', mode: 'draw', strokes: [], typed: '', name: '', png: null, at: null, cv: null, redraw: null };
+const signedMsg = (docId) => (FB.on ? thread(`doc:${docId}`).filter((m) => m.kind === 'signature').pop() : null);
+const payDone = (docId) => B.access.some((a) => a.sign === docId && a.status === 'received');
+function signCard(docId) {
+  const d = docById(docId); if (!d || !d.html) return '';
+  const s = signedMsg(docId), pay = B.payment, showPay = pay && !payDone(docId);
+  if (!FB.on) return `<div class="action"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>${FB.why === 'nokey' ? 'Open the private link you were sent to sign it here.' : 'Signing here will be available shortly. Until then, the PDF can be signed as usual.'}</span></div></div></div>`;
+  if (s) return `<div class="action done"><div class="action-h"><span class="action-ic">${svg('check')}</span><div><b>Signed by ${esc(s.author)}</b><span>${stampAt(s.at)}. The signed PDF will follow.</span></div></div>
+    <div class="action-b">${showPay ? `<a class="btn" href="${esc(pay.url)}" target="_blank" rel="noopener noreferrer">${esc(pay.label)} · ${esc(pay.amount)}</a>` : ''}<button class="btn ghost" data-sign-view="${docId}">View signed copy</button></div>
+    ${showPay ? `<p class="action-n">${esc(pay.detail)}</p>` : ''}</div>`;
+  return `<div class="action todo"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>Read it here, add your signature and approve. It takes about two minutes.</span></div></div><div class="action-b"><button class="btn" data-sign="${docId}">Review and sign</button></div></div>`;
+}
+function openSign(docId, viewOnly) {
+  const d = docById(docId); if (!d || !d.html) return;
+  Object.assign(SIGN, { doc: d, step: viewOnly ? 'view' : 'read', mode: 'draw', strokes: [], typed: '', name: SIGN.name || myName(), png: null, at: null });
+  if (viewOnly) { const m = signedMsg(docId); if (m) { SIGN.png = m.files && m.files[0] ? fileUrl(m, 0) : null; SIGN.name = m.author; SIGN.at = m.at; } }
+  if (!document.getElementById('sigfont')) { const l = document.createElement('link'); l.id = 'sigfont'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap'; document.head.appendChild(l); }
+  SIGN.el = document.createElement('div'); SIGN.el.className = 'sign'; SIGN.el.setAttribute('role', 'dialog'); SIGN.el.setAttribute('aria-modal', 'true');
+  document.body.appendChild(SIGN.el); document.body.style.overflow = 'hidden';
+  paintSign();
+}
+function closeSign() { if (SIGN.el) SIGN.el.remove(); SIGN.el = null; if (!ui.stack.length) document.body.style.overflow = ''; }
+function withSignature(html, highlight) {
+  const w = document.createElement('div'); w.innerHTML = html;
+  const first = (rows, l) => rows.find((r) => r.cells[0] && r.cells[0].textContent.trim().toLowerCase() === l);
+  const sig = first([...w.querySelectorAll('tr')], 'signature');
+  const dt = sig ? first([...sig.closest('table').querySelectorAll('tr')], 'date') : null;
+  const at = SIGN.at ? new Date(SIGN.at) : new Date();
+  if (sig && sig.cells[1] && SIGN.png) { sig.cells[1].innerHTML = `<img class="sig-img" src="${SIGN.png}" alt="Signature">`; if (highlight) sig.classList.add('sig-hl'); }
+  if (dt && dt.cells[1]) dt.cells[1].textContent = at.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const table = sig && sig.closest('table');
+  if (table) { const p = document.createElement('p'); p.className = 'esig'; p.textContent = `Signed electronically by ${SIGN.name} on ${at.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}.`; table.after(p); }
+  return w.innerHTML;
+}
+function paintSign() {
+  const d = SIGN.doc, st = SIGN.step, idx = { read: 0, pad: 1, review: 2, done: 3 }[st];
+  const steps = st === 'view' ? `<b style="font-size:14px">${esc(d.title)}</b>` : `<div class="steps">${['Read', 'Sign', 'Approve'].map((l, i) => `<span class="${i === idx ? 'on' : i < idx ? 'ok' : ''}">${i < idx ? '✓' : i + 1} ${l}</span>`).join('')}</div>`;
+  let body = '', foot = '';
+  if (st === 'read' || st === 'view') {
+    body = `<article class="doc">${st === 'view' ? withSignature(d.html) : d.html}</article>`;
+    foot = st === 'view' ? `<span class="hint">The copy you signed in the tracker.</span><button class="btn ghost" data-s="close">Close</button>` : `<span class="hint">Take your time. You sign at the end.</span><button class="btn" data-s="pad">Add my signature</button>`;
+  } else if (st === 'pad') {
+    body = `<div class="pad-wrap"><h2>Your signature</h2><p>Sign with your finger or mouse, or type your name.</p>
+      <div class="seg"><button data-s="mode-draw" class="${SIGN.mode === 'draw' ? 'on' : ''}">Draw</button><button data-s="mode-type" class="${SIGN.mode === 'type' ? 'on' : ''}">Type</button></div>
+      <div class="pad"><button class="pad-x" data-s="clear">Clear</button><canvas id="sigpad" aria-label="Signature area"></canvas></div>
+      ${SIGN.mode === 'type' ? `<label class="field"><span>Type your signature</span><input id="sigtype" value="${esc(SIGN.typed)}" placeholder="Your name" autocomplete="name"></label>` : ''}
+      <label class="field"><span>Your full name</span><input id="signame" value="${esc(SIGN.name)}" placeholder="Full name" autocomplete="name"></label></div>`;
+    foot = `<button class="btn ghost" data-s="read">Back</button><button class="btn" data-s="review">Preview the signed copy</button>`;
+  } else if (st === 'review') {
+    body = `<article class="doc">${withSignature(d.html, true)}</article>`;
+    foot = `<label class="consent"><input type="checkbox" id="consent"><span>I agree to this ${esc(d.title)} and to signing it electronically.</span></label><button class="btn ghost" data-s="pad">Change signature</button><button class="btn" data-s="approve" id="approveBtn" disabled>I approve</button>`;
+  } else {
+    const pay = B.payment;
+    body = `<div class="done-wrap"><div class="done-ic">${svg('check')}</div><h2>Thank you, it's signed</h2><p>I'll add your signature to the PDF and send you the signed copy.</p>
+      ${pay && !payDone(d.id) ? `<div class="pay-card"><b>Next step</b><span>${esc(pay.detail)}</span><a class="btn" href="${esc(pay.url)}" target="_blank" rel="noopener noreferrer">${esc(pay.label)} · ${esc(pay.amount)}</a></div>` : ''}</div>`;
+    foot = `<button class="btn ghost" data-s="close">Done</button>`;
+  }
+  SIGN.el.innerHTML = `<div class="sign-top"><button class="p-btn" data-s="close" aria-label="Close">${svg('x')}</button>${steps}<span style="width:34px"></span></div><div class="sign-body">${body}</div><div class="sign-foot">${foot}</div>`;
+  if (st === 'pad') setupPad();
+  if (st === 'review') {
+    const hl = SIGN.el.querySelector('.sig-hl'); if (hl) hl.scrollIntoView({ block: 'center' });
+    SIGN.el.querySelector('#consent').addEventListener('change', (e) => { SIGN.el.querySelector('#approveBtn').disabled = !e.target.checked; });
+  }
+}
+function setupPad() {
+  const cv = SIGN.el.querySelector('#sigpad'), r = cv.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const redraw = () => {
+    ctx.clearRect(0, 0, r.width, r.height);
+    ctx.fillStyle = ctx.strokeStyle = '#111827'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.4;
+    if (SIGN.mode === 'type') { const size = Math.max(28, Math.min(58, (r.width - 56) / Math.max(4, SIGN.typed.length * 0.5))); ctx.font = `600 ${size}px Caveat, 'Segoe Script', 'Brush Script MT', cursive`; ctx.fillText(SIGN.typed, 28, r.height - 58); return; }
+    for (const s of SIGN.strokes) { ctx.beginPath(); s.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); if (s.length === 1) ctx.lineTo(s[0].x + 0.1, s[0].y + 0.1); ctx.stroke(); }
+  };
+  SIGN.cv = cv; SIGN.redraw = redraw; redraw();
+  if (SIGN.mode === 'draw') {
+    let cur = null;
+    const pt = (e) => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+    cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pt(e)]; SIGN.strokes.push(cur); redraw(); });
+    cv.addEventListener('pointermove', (e) => { if (!cur) return; cur.push(pt(e)); redraw(); });
+    cv.addEventListener('pointerup', () => { cur = null; });
+    cv.addEventListener('pointercancel', () => { cur = null; });
+  } else {
+    const inp = SIGN.el.querySelector('#sigtype');
+    inp.addEventListener('input', () => { SIGN.typed = inp.value; redraw(); });
+    if (document.fonts) document.fonts.load('600 40px Caveat').then(redraw).catch(() => {});
+  }
+  SIGN.el.querySelector('#signame').addEventListener('input', (e) => { SIGN.name = e.target.value; });
+}
+function sigPng() {
+  const cv = SIGN.cv; if (!cv) return null;
+  const { width: w, height: h } = cv, data = cv.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = 0, y1 = 0, any = false;
+  for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (data[(y * w + x) * 4 + 3] > 20) { any = true; if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+  if (!any) return null;
+  const pad = 14; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w, x1 + pad); y1 = Math.min(h, y1 + pad);
+  const out = document.createElement('canvas'); out.width = x1 - x0; out.height = y1 - y0;
+  out.getContext('2d').drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}
+async function signAction(a) {
+  if (a === 'close') return closeSign();
+  if (a === 'read' || a === 'pad') { SIGN.step = a; return paintSign(); }
+  if (a === 'mode-draw' || a === 'mode-type') { SIGN.mode = a.slice(5); return paintSign(); }
+  if (a === 'clear') { SIGN.strokes = []; SIGN.typed = ''; const i = SIGN.el.querySelector('#sigtype'); if (i) i.value = ''; return SIGN.redraw && SIGN.redraw(); }
+  if (a === 'review') {
+    SIGN.name = (SIGN.el.querySelector('#signame').value || '').trim();
+    if (!SIGN.name) return toast('Please add your full name');
+    const png = sigPng();
+    if (!png) return toast(SIGN.mode === 'type' ? 'Please type your signature' : 'Please sign in the box');
+    SIGN.png = png; SIGN.at = null; SIGN.step = 'review'; return paintSign();
+  }
+  if (a === 'approve') {
+    const btn = SIGN.el.querySelector('#approveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      if (!myName()) store.set('tracker.name', SIGN.name);
+      await fbSend({ v: 1, item: `doc:${SIGN.doc.id}`, author: SIGN.name, role: 'client', kind: 'signature', text: `Signed the ${SIGN.doc.title}.`, at: new Date().toISOString(),
+        files: [{ type: 'image/png', name: 'signature.png', data: SIGN.png.split(',')[1] }],
+        doc: { id: SIGN.doc.id, title: SIGN.doc.title, version: SIGN.doc.version, agent: navigator.userAgent.slice(0, 160) } });
+      SIGN.step = 'done'; paintSign(); paintPage(); if (ui.stack.length && !composing()) drawPanel(true);
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = 'I approve'; }
+  }
+}
+
+/* ---------- Model ---------- */
+const byId = (id) => B.tasks.find((t) => t.id === id);
+const accessById = (id) => B.access.find((a) => a.id === id);
+const docById = (id) => (B.documents || []).find((d) => d.id === id);
+const phaseOf = (id) => B.phases.find((p) => p.id === id) || { name: '', color: '#999' };
+const who = (o) => (B.meta.owners || {})[o] || o;
+const lead = () => ((B.contact && B.contact.name) || 'us').split(' ')[0];
+const byDue = (a, b) => a.due.localeCompare(b.due);
+const byBy = (a, b) => (a.by || '9999').localeCompare(b.by || '9999');
+const needsOk = (t) => t.status !== 'done' && (t.info.need || []).some((n) => /approv|\bOK\b|\bgo\b|decision|agree/i.test(n));
+const accessOk = (a) => !['received', 'not needed'].includes(a.status) && /\bOK\b|agree|approved/i.test(`${a.how} ${(a.howTo || []).join(' ')}`);
+
+function state(t) {
+  if (t.status === 'done') return { k: 'done', label: 'Done' };
+  const team = TEAM.includes(t.owner);
+  if (t.due < today) return { k: 'late', label: team ? 'Needed now' : 'Running late' };
+  if (t.status === 'waiting') return { k: 'wait', label: 'Waiting' };
+  if (team && t.start <= today) return { k: 'wait', label: t.owner === 'client' ? 'With your team' : `With ${who(t.owner)}` };
+  if (t.status === 'doing' || t.start <= today) return { k: 'doing', label: 'In progress' };
+  return { k: 'todo', label: 'Not started' };
+}
+function when(t) {
+  if (t.status === 'done') return { text: t.doneOn ? `Done ${fmt(t.doneOn)}` : 'Done', cls: 'done' };
+  const s = diff(today, t.start), d = diff(today, t.due);
+  if (s > 0) return { text: s === 1 ? 'Starts tomorrow' : s < 7 ? `Starts ${dayName(t.start)}` : `Starts ${fmt(t.start)}`, cls: '' };
+  if (d < 0) return { text: TEAM.includes(t.owner) ? `Was due ${fmt(t.due)}` : `${plural(-d, 'day')} late`, cls: 'late' };
+  if (d === 0) return { text: 'Due today', cls: 'soon' };
+  if (d === 1) return { text: 'Due tomorrow', cls: 'soon' };
+  if (d < 7) return { text: `Due ${dayName(t.due)}`, cls: '' };
+  return { text: `Due ${fmt(t.due)}`, cls: '' };
+}
+function byWhen(by) {
+  if (!by) return { text: '', cls: '' };
+  const d = diff(today, by);
+  if (d < 0) return { text: `Was due ${fmt(by)}`, cls: 'late' };
+  if (d === 0) return { text: 'Needed today', cls: 'soon' };
+  if (d === 1) return { text: 'Needed tomorrow', cls: 'soon' };
+  return { text: `By ${d < 7 ? dayName(by) : fmt(by)}`, cls: '' };
+}
+function icon(k, cls = 'ic') {
+  const c = { done: 'var(--good)', doing: 'var(--accent)', wait: 'var(--warn)', late: 'var(--bad)', todo: 'var(--faint)' }[k];
+  const ring = `<circle cx="10" cy="10" r="8" fill="none" stroke="${c}" stroke-width="1.8"/>`;
+  const body = {
+    done: `<circle cx="10" cy="10" r="9" fill="${c}"/><path d="M6 10.4l2.6 2.6L14 7.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    doing: `${ring}<path d="M10 4.8a5.2 5.2 0 0 1 0 10.4z" fill="${c}"/>`,
+    wait: `${ring}<path d="M10 6.2v4l2.5 1.6" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/>`,
+    late: `${ring}<path d="M10 6v4.6" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="13.6" r="1.1" fill="${c}"/>`,
+    todo: `<circle cx="10" cy="10" r="8" fill="none" stroke="${c}" stroke-width="1.8" stroke-dasharray="2.4 2.5"/>`,
+  }[k];
+  return `<svg class="${cls}" viewBox="0 0 20 20" aria-hidden="true">${body}</svg>`;
+}
+function mring(f, color) {
+  const L = 2 * Math.PI * 7;
+  return `<svg class="mring" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7" fill="none" stroke="var(--track)" stroke-width="2.4"/>${f > 0 ? `<circle cx="9" cy="9" r="7" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="${L}" stroke-dashoffset="${L * (1 - f)}"/>` : ''}</svg>`;
+}
+
+function compute() {
+  today = todayStr();
+  const M = B.meta;
+  const tasks = B.tasks.filter((t) => t.status !== 'skipped');
+  const done = tasks.filter((t) => t.status === 'done');
+  const open = tasks.filter((t) => t.status !== 'done');
+  const pct = tasks.length ? Math.round((done.length / tasks.length) * 100) : 0;
+  const linked = new Set(B.access.flatMap((a) => a.tasks));
+  const aItem = (a) => ({ kind: 'access', id: a.id, icon: 'key', title: a.item, sub: 'Access', by: a.by });
+  const tItem = (t, sub, ic) => ({ kind: 'task', id: t.id, icon: ic, title: t.title, sub, by: t.due });
+  const team = tasks.filter((t) => TEAM.includes(t.owner) && !linked.has(t.id));
+  const inputs = open.filter((t) => t.owner === 'lead' && t.info.need.length && !linked.has(t.id));
+  const fromTeam = (t) => (t.owner === 'client' ? 'From your team' : `From ${who(t.owner)}`);
+  const needNow = [
+    ...B.access.filter((a) => ['asked', 'waiting'].includes(a.status)).map(aItem),
+    ...team.filter((t) => t.status !== 'done' && (t.start <= addDays(today, 3) || t.status === 'waiting')).map((t) => tItem(t, fromTeam(t), 'user')),
+    ...inputs.filter((t) => t.start <= today || t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
+  ].sort(byBy);
+  const seen = new Set(needNow.map((n) => n.kind + n.id));
+  const horizon = addDays(today, 21);
+  const needSoon = [
+    ...B.access.filter((a) => a.status === 'todo' && (!a.by || a.by <= horizon)).map(aItem),
+    ...team.filter((t) => t.status !== 'done' && !seen.has('task' + t.id) && t.start <= horizon).map((t) => tItem(t, fromTeam(t), 'user')),
+    ...inputs.filter((t) => !seen.has('task' + t.id) && t.start <= horizon).map((t) => tItem(t, 'Your input', 'pen')),
+  ].sort(byBy);
+  const needDone = [
+    ...B.access.filter((a) => ['received', 'not needed'].includes(a.status)).map(aItem),
+    ...team.filter((t) => t.status === 'done').map((t) => tItem(t, 'From your team', 'user')),
+  ];
+  const leadLate = open.filter((t) => t.owner === 'lead' && t.due < today);
+  const teamLate = needNow.filter((n) => n.by && n.by < today);
+  const launched = today >= M.launch;
+  const health = launched ? { label: 'Live', tone: '' } : leadLate.length ? { label: 'Catching up', tone: 'warn' } : teamLate.length ? { label: 'Waiting on a few inputs', tone: 'warn' } : { label: 'On track', tone: '' };
+  const feed = [
+    ...B.updates.map((u) => ({ date: u.date, kind: 'update', text: u.text })),
+    ...done.filter((t) => t.doneOn).map((t) => ({ date: t.doneOn, kind: 'done', id: t.id, text: t.title })),
+    ...tasks.filter((t) => t.startedOn && t.status !== 'done').map((t) => ({ date: t.startedOn, kind: 'start', id: t.id, text: t.title })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || (a.kind === 'update' ? -1 : 1));
+  const nextMs = (B.milestones || []).map(byId).filter(Boolean).find((t) => t.status !== 'done');
+  return { M, tasks, done, open, pct, needNow, needSoon, needDone, health, launched, feed, nextMs };
+}
+
+/* ---------- Pieces ---------- */
+function taskRow(t) {
+  const w = when(t);
+  return `<button class="row" data-task="${t.id}">${icon(state(t).k)}<span class="row-t">${esc(t.title)}<small class="m-when ${w.cls}">${w.text}</small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`task:${t.id}`]))}${svg('chev', 'chev')}</button>`;
+}
+function needRow(n, tone = '') {
+  const w = tone === 'done' ? { text: 'Received', cls: 'done' } : byWhen(n.by);
+  const attr = n.kind === 'access' ? `data-access="${n.id}"` : `data-task="${n.id}"`;
+  return `<button class="row" ${attr}><span class="kind ${tone}">${svg(tone === 'done' ? 'check' : n.icon)}</span><span class="row-t">${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
+}
+function feedRow(f) {
+  const label = f.kind === 'done' ? '<em class="done">Done</em> ' : f.kind === 'start' ? '<em>Started</em> ' : '';
+  const tag = f.id ? 'button' : 'div';
+  return `<${tag} class="up" ${f.id ? `data-task="${f.id}"` : ''}><time>${f.date === today ? 'Today' : fmt(f.date)}</time><span>${label}${esc(f.text)}</span></${tag}>`;
+}
+function phaseInfo(p, c) {
+  const ts = c.tasks.filter((t) => t.phase === p.id).sort((a, b) => a.start.localeCompare(b.start) || byDue(a, b));
+  const dn = ts.filter((t) => t.status === 'done').length;
+  const finished = ts.length > 0 && dn === ts.length, current = p.start <= today && today <= p.end;
+  const tag = finished ? '<span class="tag done">Done</span>' : current ? '<span class="tag now">In progress</span>' : p.end < today ? '<span class="tag warn">Finishing</span>' : `<span class="tag next">${diff(today, p.start) <= 7 ? `Starts ${dayName(p.start)}` : `From ${fmt(p.start)}`}</span>`;
+  return { ts, dn, finished, current, tag, comments: countFor([`phase:${p.id}`, ...ts.map((t) => `task:${t.id}`)]) };
+}
+const docStatusText = (d) => (signedMsg(d.id) ? 'Signed' : d.status);
+function docTone(d) { const s = docStatusText(d) || ''; return /waiting/i.test(s) ? 'warn' : /signed|received|done/i.test(s) ? 'done' : /sent/i.test(s) ? 'now' : 'next'; }
+
+/* ---------- Page ---------- */
+function page(c) {
+  const M = c.M, d = diff(today, M.launch);
+  const line = c.launched ? `Launched ${fmtL(M.launch)}` : `${plural(d, 'day')} to go${c.nextMs ? ` · Next milestone: <b>${esc(c.nextMs.title)}</b>, ${fmtW(c.nextMs.due)}` : ''}`;
+  const needHtml = c.needNow.length ? `
+    <div class="box need"><div class="need-h">Waiting on you <span class="count">${c.needNow.length}</span></div>
+      ${c.needNow.slice(0, 3).map((n) => needRow(n)).join('')}
+      <button class="more" data-view="needs">See everything we need from you</button></div>` : '';
+  const cards = B.phases.map((p, i) => {
+    const x = phaseInfo(p, c);
+    return `<button class="pc ${x.current && !x.finished ? 'now' : ''}" data-phase="${p.id}">
+      <span class="pc-top"><span>${String(i + 1).padStart(2, '0')}</span>${x.tag}</span>
+      <span class="pc-name">${esc(p.name)}</span><span class="pc-d">${fmt(p.start)} – ${fmt(p.end)}</span>
+      <span class="pc-bot">${mring(x.ts.length ? x.dn / x.ts.length : 0, p.color)}<span><b>${x.dn}</b> of ${x.ts.length} done</span>${ccHtml(x.comments)}</span></button>`;
+  }).join('');
+  const general = countFor(['general']);
+  return `<div class="page">
+    <div class="top"><div class="brand"><span class="mark">${esc((M.project || 'P')[0])}</span><span>${esc(M.project)}</span><span>Project tracker</span></div>
+      <div class="live" id="live"><span class="pulse"></span><span id="ago"></span></div></div>
+    <nav class="quick" aria-label="Sections">
+      <button class="qb" data-view="needs">${svg('list')}Needed from you${c.needNow.length ? ` <span class="count">${c.needNow.length}</span>` : ''}</button>
+      <button class="qb" data-view="updates">${svg('clock')}Updates</button>
+      <button class="qb" data-view="docs">${svg('doc')}Documents</button>
+      <button class="qb" data-view="about">${svg('info')}How we work</button>
+      <button class="qb primary" data-view="message">${svg('chat')}Message ${esc(lead())}${general ? ` · ${general}` : ''}</button>
+    </nav>
+    <section class="status">
+      <span class="health ${c.health.tone}"><i></i>${c.health.label}</span>
+      <h1>${c.launched ? `${esc(M.project)} is live` : `Launch on ${esc(fmtL(M.launch))}`}</h1>
+      <p class="meta">${line}</p>
+      <div class="prog"><span class="bar"><i style="width:${c.pct}%"></i></span><div class="prog-l"><span><b>${c.done.length}</b> of ${c.tasks.length} tasks done</span><span>${c.pct}%</span></div></div>
+    </section>
+    ${needHtml}
+    <div class="sec-h"><h2>Progress by phase</h2><span>Tap a phase to see its tasks</span></div>
+    <div class="pcards">${cards}</div>
+    <div class="sec-h"><h2>Latest updates</h2>${c.feed.length > 3 ? '<button data-view="updates">View all</button>' : ''}</div>
+    <div class="box">${c.feed.length ? c.feed.slice(0, 3).map(feedRow).join('') : '<div class="up"><time></time><span>No updates yet.</span></div>'}</div>
+    <footer>Prepared by ${esc(M.preparedBy)}. This page updates by itself, so there's no need to refresh.<br>It's a private link for ${esc(M.project)}. Please don't forward it.</footer>
+  </div>`;
+}
+
+/* ---------- Panel views ---------- */
+const ul = (a) => `<ul class="ul">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+const chip = (t) => `<button class="chip" data-task="${t.id}">${icon(state(t).k)}<span>${esc(t.title)}</span></button>`;
+function vTask(t) {
+  const p = phaseOf(t.phase), s = state(t), w = when(t), I = t.info;
+  const acc = B.access.filter((a) => a.tasks.includes(t.id));
+  const after = t.depends.map(byId).filter(Boolean);
+  const next = B.tasks.filter((x) => x.depends.includes(t.id));
+  const props = [['Status', `${icon(s.k)}${esc(s.label)}`], ['Owner', esc(who(t.owner))], ['Dates', `${t.start === t.due ? fmtW(t.due) : `${fmt(t.start)} → ${fmt(t.due)}`} <span style="color:var(--muted)">· ${w.text}</span>`]];
+  if (t.progress && t.status !== 'done') props.push(['Progress', `<span class="bar"><i style="width:${(t.progress[0] / t.progress[1]) * 100}%"></i></span><span>${t.progress[0]} of ${t.progress[1]} steps</span>`]);
+  if (t.status === 'done' && t.doneOn) props.push(['Completed', fmtL(t.doneOn)]);
+  let h = `<div class="p-eye"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</div><h3>${esc(t.title)}</h3><dl class="props">${props.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+  if (I.what) h += `<div class="blk"><h4>What this is</h4><p>${esc(I.what)}</p></div>`;
+  if (I.why) h += `<div class="blk"><h4>Why it matters</h4><p>${esc(I.why)}</p></div>`;
+  if (I.need.length && t.status !== 'done') h += `<div class="note warn"><h4>What we need from you</h4>${ul(I.need)}${acc.length ? `<div class="chips" style="margin-top:10px">${acc.map((a) => `<button class="chip" data-access="${a.id}">${svg('key', 'ic')}<span>${esc(a.item)}</span></button>`).join('')}</div>` : ''}</div>`;
+  if (I.involves.length) h += `<div class="blk"><h4>What's involved</h4>${ul(I.involves)}</div>`;
+  if (I.done) h += `<div class="note good"><h4>${t.status === 'done' ? 'Delivered' : 'Done when'}</h4><p>${esc(I.done)}</p></div>`;
+  if (after.length) h += `<div class="blk"><h4>Comes after</h4><div class="chips">${after.map(chip).join('')}</div></div>`;
+  if (next.length) h += `<div class="blk"><h4>Leads to</h4><div class="chips">${next.map(chip).join('')}</div></div>`;
+  return h + commentsHtml(`task:${t.id}`, needsOk(t));
+}
+function vAccess(a) {
+  const ts = a.tasks.map(byId).filter(Boolean);
+  const w = ['received', 'not needed'].includes(a.status) ? null : byWhen(a.by);
+  const st = a.status === 'received' ? icon('done') : ['asked', 'waiting'].includes(a.status) ? icon('wait') : icon('todo');
+  let h = `<div class="p-eye">${svg('key', 'ic')}Access we need</div><h3>${esc(a.item)}</h3>
+    <dl class="props"><div><dt>Status</dt><dd>${st}${esc(ACCESS[a.status] || 'Coming up')}</dd></div>${a.by ? `<div><dt>Needed by</dt><dd>${fmtW(a.by)}${w && w.cls === 'late' ? ' <span style="color:var(--bad)">· overdue</span>' : ''}</dd></div>` : ''}<div><dt>Who</dt><dd>${esc(a.from)}</dd></div></dl>`;
+  if (a.sign) h += signCard(a.sign);
+  if (a.why) h += `<div class="blk"><h4>Why I need it</h4><p>${esc(a.why)}</p></div>`;
+  h += `<div class="blk"><h4>How to give it</h4>${a.howTo.length ? `<ol class="ol">${a.howTo.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : `<p>${esc(a.how)}</p>`}</div>`;
+  h += `<div class="note info"><h4>Safe sharing</h4><p>Please send invitations rather than passwords. Passwords and keys never go by WhatsApp, email or these comments, and any access can be removed at any time.</p></div>`;
+  if (ts.length) h += `<div class="blk"><h4>Used for</h4><div class="chips">${ts.map(chip).join('')}</div></div>`;
+  return h + commentsHtml(`access:${a.id}`, accessOk(a));
+}
+function vPhase(p) {
+  const x = phaseInfo(p, C), i = B.phases.indexOf(p), pc = x.ts.length ? Math.round((x.dn / x.ts.length) * 100) : 0;
+  let h = `<div class="p-eye"><span class="dot" style="background:${p.color}"></span>Phase ${i + 1} of ${B.phases.length}</div><h3>${esc(p.name)}</h3>
+    <dl class="props"><div><dt>Status</dt><dd>${x.tag}</dd></div><div><dt>Dates</dt><dd>${fmtW(p.start)} → ${fmtW(p.end)}</dd></div><div><dt>Progress</dt><dd><span class="bar"><i style="width:${pc}%"></i></span><span>${x.dn} of ${x.ts.length} tasks</span></dd></div></dl>`;
+  if (p.summary) h += `<div class="blk"><h4>About this phase</h4><p>${esc(p.summary)}</p></div>`;
+  if (p.outcome) h += `<div class="note good"><h4>Goal</h4><p>${esc(p.outcome)}</p></div>`;
+  h += `<p class="p-sub">Tasks · ${x.ts.length}</p><div class="p-list">${x.ts.map(taskRow).join('')}</div>`;
+  return h + commentsHtml(`phase:${p.id}`, false, 'Comments on this phase');
+}
+function vNeeds() {
+  const sec = (title, list, tone, empty) => `<p class="p-sub">${title}</p>${list.length ? `<div class="p-list">${list.map((n) => needRow(n, tone)).join('')}</div>` : `<p class="p-empty">${empty}</p>`}`;
+  return `<div class="p-eye">${svg('list', 'ic')}Needed from you</div><h3>Everything we need from you</h3>
+    <p class="p-empty" style="color:var(--ink2)">Tap any item to see why it's needed and exactly how to give it. This covers the next three weeks.</p>
+    ${sec(`Waiting on you now · ${C.needNow.length}`, C.needNow, '', 'Nothing right now. Thank you!')}
+    ${sec(`Coming up · ${C.needSoon.length}`, C.needSoon, 'soon', 'Nothing else planned yet.')}
+    ${sec(`Received · ${C.needDone.length}`, C.needDone, 'done', 'Items you send will appear here.')}`;
+}
+function vUpdates() {
+  return `<div class="p-eye">${svg('clock', 'ic')}Updates</div><h3>Everything that has happened</h3>${C.feed.length ? `<div class="p-list">${C.feed.map(feedRow).join('')}</div>` : '<p class="p-empty">No updates yet.</p>'}`;
+}
+function vDocs() {
+  const docs = B.documents || [];
+  return `<div class="p-eye">${svg('doc', 'ic')}Documents</div><h3>Documents</h3>
+    <p class="p-empty" style="color:var(--ink2)">The key documents for the project and where each one stands. Tap one to comment on it.</p>
+    ${docs.length ? `<div class="p-list">${docs.map((d) => `<button class="row" data-doc="${d.id}"><span class="kind doc">${svg('doc')}</span><span class="row-t">${esc(d.title)}<small>${fmt(d.date)}<span class="m-when"> · ${esc(docStatusText(d))}</span></small></span><span class="when"><span class="tag ${docTone(d)}">${esc(docStatusText(d))}</span></span>${ccHtml(countFor([`doc:${d.id}`]))}${svg('chev', 'chev')}</button>`).join('')}</div>` : '<p class="p-empty">No documents yet.</p>'}`;
+}
+function vDoc(d) {
+  let h = `<div class="p-eye">${svg('doc', 'ic')}Document</div><h3>${esc(d.title)}</h3>
+    <dl class="props"><div><dt>Status</dt><dd><span class="tag ${docTone(d)}">${esc(docStatusText(d))}</span></dd></div><div><dt>Date</dt><dd>${fmtW(d.date)}</dd></div></dl>`;
+  if (d.sign) h += signCard(d.id);
+  if (d.summary) h += `<div class="blk"><h4>What it covers</h4><p>${esc(d.summary)}</p></div>`;
+  if (d.html && !d.sign) h += `<div class="action-b" style="margin:0 0 22px"><button class="btn ghost" data-read="${d.id}">Read it here</button></div>`;
+  h += `<div class="note info"><h4>Where to find it</h4><p>${esc(lead())} sends documents as PDF. If anything needs changing, comment below or send a voice note.</p></div>`;
+  return h + commentsHtml(`doc:${d.id}`, false);
+}
+function vMessage() {
+  return `<div class="p-eye">${svg('chat', 'ic')}Messages</div><h3>Message ${esc(lead())}</h3>
+    <p class="p-empty" style="color:var(--ink2)">Ask anything, or send a screenshot or a voice note. To comment on a specific task, open the task and use the comments there.</p>
+    ${commentsHtml('general', false, 'Conversation')}`;
+}
+function vAbout() {
+  const k = B.contact || {};
+  const initials = (k.name || 'R').split(' ').map((w) => w[0]).slice(0, 2).join('');
+  return `<div class="p-eye">${svg('info', 'ic')}How we work</div><h3>Working together</h3>
+    <div class="person"><span class="avatar">${esc(initials)}</span><div><b>${esc(k.name)}</b><span>${esc(k.role)}</span></div></div>
+    <dl class="props"><div><dt>Contact</dt><dd>${esc(k.channel)}</dd></div><div><dt>Replies</dt><dd>${esc(k.replies)}</dd></div></dl>
+    <div class="blk"><h4>What you'll hear from me</h4>${(B.rhythm || []).map((r) => `<div class="rh"><b>${esc(r.when)}</b><span>${esc(r.what)}</span></div>`).join('')}</div>
+    <div class="blk"><h4>How we work</h4><ul class="ul">${(B.howWeWork || []).map((x) => `<li><span><b style="color:var(--ink);font-weight:600">${esc(x.t)}.</b> ${esc(x.d)}</span></li>`).join('')}</ul></div>
+    <div class="note good"><h4>Security commitments</h4>${ul(B.commitments || [])}</div>
+    <div class="blk"><h4>Comments on this page</h4><p>You can comment on any task, phase, document or access item, attach a screenshot or record a voice note. Comments are encrypted in your browser, just like the page, so only people with this link can read them.</p></div>`;
+}
+
+/* ---------- Panel ---------- */
+let lastFocus = null;
+function drawPanel(keep) {
+  const cur = ui.stack[ui.stack.length - 1], el = $('#panel');
+  if (!cur) return;
+  let html;
+  if (cur.type === 'task') { const t = byId(cur.id); if (!t) return closePanel(); html = vTask(t); }
+  else if (cur.type === 'access') { const a = accessById(cur.id); if (!a) return closePanel(); html = vAccess(a); }
+  else if (cur.type === 'phase') { const p = B.phases.find((x) => x.id === cur.id); if (!p) return closePanel(); html = vPhase(p); }
+  else if (cur.type === 'doc') { const d = docById(cur.id); if (!d) return closePanel(); html = vDoc(d); }
+  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage }[cur.type]();
+  const top = keep ? ($('.p-body', el) || {}).scrollTop || 0 : 0;
+  el.innerHTML = `<div class="p-bar">${ui.stack.length > 1 ? `<button class="p-btn" data-back>${svg('back')}Back</button>` : '<span></span>'}<button class="p-btn" data-close aria-label="Close">${svg('x')}</button></div><div class="p-body">${html}</div>`;
+  $('.p-body', el).scrollTop = top;
+}
+function openPanel(type, id, push) {
+  if (rec) return toast('Stop the voice note first');
+  if (!ui.stack.length) lastFocus = document.activeElement;
+  if (push && ui.stack.length) ui.stack.push({ type, id }); else ui.stack = [{ type, id }];
+  approveArm = null;
+  drawPanel(false);
+  $('#panel').classList.add('on'); $('#scrim').classList.add('on'); $('#panel').setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function closePanel() {
+  if (rec) return toast('Stop the voice note first');
+  ui.stack = [];
+  $('#panel').classList.remove('on'); $('#scrim').classList.remove('on'); $('#panel').setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+}
+
+/* ---------- Render + live ---------- */
+function paintPage() { C = compute(); const y = window.scrollY; $('#app').innerHTML = page(C); window.scrollTo(0, y); stamp(); }
+function render() {
+  C = compute();
+  document.title = `${C.M.project} · Project tracker`;
+  const y = window.scrollY;
+  $('#app').innerHTML = page(C);
+  window.scrollTo(0, y);
+  stamp();
+  if (ui.stack.length) { if (composing()) paintThreads(); else drawPanel(true); }
+}
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return 'on ' + new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+function stamp() {
+  const el = $('#ago'); if (!el || !B) return;
+  el.textContent = 'Updated ' + ago(B.generatedAt);
+  $('#live').classList.toggle('stale', Date.now() - new Date(B.generatedAt) > 3 * 864e5);
+}
+let toastT = null;
+function toast(m) { const el = $('#toast'); el.textContent = m; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3200); }
+async function load(first) {
+  // On the local desk, the preview without a key switches to the keyed preview, so signing and comments work.
+  if (first && !new URLSearchParams(location.hash.slice(1)).get('k') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    try {
+      const j = await (await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
+      if (j.url) { location.replace(j.url); return; }
+    } catch {}
+  }
+  try {
+    const d = await getData();
+    const changed = first || d.generatedAt !== lastGen;
+    if (changed) { B = d; lastGen = d.generatedAt; }
+    if (first) { await fbInit(); render(); if (await fbSync()) render(); return; }
+    const added = await fbSync();
+    if (changed || added) {
+      render();
+      if (changed) { const l = $('#live'); l.classList.add('flash'); setTimeout(() => l.classList.remove('flash'), 4000); }
+    }
+  } catch (e) {
+    if (!first) return;
+    const m = { 'no-key': ['This link is incomplete', 'Please open the full link you were sent, including everything after the # sign.'],
+      'bad-key': ['This link has expired', 'Please ask for the current link.'],
+      'not-ready': ['Almost ready', 'The tracker is being prepared. Please try again in a few minutes.'] }[e.message] || ['Could not load the tracker', 'Please refresh the page in a minute.'];
+    $('#app').innerHTML = `<div class="msg-page"><h1>${m[0]}</h1><p>${m[1]}</p></div>`;
+  }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  const sa = t.closest('[data-s]'); if (sa && SIGN.el && SIGN.el.contains(sa)) return signAction(sa.dataset.s);
+  const sg = t.closest('[data-sign]'); if (sg) return openSign(sg.dataset.sign);
+  const sv = t.closest('[data-sign-view]'); if (sv) return openSign(sv.dataset.signView, true);
+  const rd = t.closest('[data-read]'); if (rd) { openSign(rd.dataset.read, false); SIGN.step = 'view'; SIGN.png = null; return paintSign(); }
+  const zoom = t.closest('[data-zoom]');
+  if (zoom) { const ov = document.createElement('div'); ov.className = 'ovl'; ov.innerHTML = `<img src="${zoom.src}" alt="">`; ov.onclick = () => ov.remove(); document.body.appendChild(ov); return; }
+  const act = t.closest('[data-act]');
+  if (act) {
+    const key = act.dataset.key, i = Number(act.dataset.i);
+    if (act.dataset.act === 'send') return sendMsg(key, 'comment');
+    if (act.dataset.act === 'voice') return toggleVoice(key);
+    if (act.dataset.act === 'crop') return openCrop(key, i);
+    if (act.dataset.act === 'rm') { const f = draft(key).files.splice(i, 1)[0]; if (f) URL.revokeObjectURL(f.url); return paintComposer(key); }
+    if (act.dataset.act === 'approve') {
+      if (approveArm === key) return sendMsg(key, 'approval');
+      approveArm = key; paintComposer(key);
+      setTimeout(() => { if (approveArm === key) { approveArm = null; paintComposer(key); } }, 5000);
+      return;
+    }
+  }
+  if (t.closest('[data-close]') || t.id === 'scrim') return closePanel();
+  if (t.closest('[data-back]')) { if (rec) return toast('Stop the voice note first'); ui.stack.pop(); approveArm = null; return drawPanel(false); }
+  const inPanel = !!t.closest('#panel');
+  const tk = t.closest('[data-task]'); if (tk) return openPanel('task', tk.dataset.task, inPanel);
+  const ac = t.closest('[data-access]'); if (ac) return openPanel('access', ac.dataset.access, inPanel);
+  const ph = t.closest('[data-phase]'); if (ph) return openPanel('phase', ph.dataset.phase, inPanel);
+  const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
+  const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);
+});
+document.addEventListener('input', (e) => { const c = e.target.closest && e.target.closest('.cmp'); if (c && e.target.classList.contains('cmp-text')) draft(c.dataset.key).text = e.target.value; });
+document.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.pick) { addImages(e.target.dataset.pick, [...e.target.files]); e.target.value = ''; } });
+document.addEventListener('paste', (e) => {
+  const c = e.target.closest && e.target.closest('.cmp'); if (!c) return;
+  const imgs = [...(e.clipboardData ? e.clipboardData.items : [])].filter((it) => it.kind === 'file' && it.type.startsWith('image/')).map((it) => it.getAsFile()).filter(Boolean);
+  if (imgs.length) { e.preventDefault(); addImages(c.dataset.key, imgs); }
+});
+document.addEventListener('dragover', (e) => { const c = e.target.closest && e.target.closest('.cmp'); if (c) { e.preventDefault(); c.classList.add('drag'); } });
+document.addEventListener('dragleave', (e) => { const c = e.target.closest && e.target.closest('.cmp'); if (c) c.classList.remove('drag'); });
+document.addEventListener('drop', (e) => { const c = e.target.closest && e.target.closest('.cmp'); if (!c) return; e.preventDefault(); c.classList.remove('drag'); addImages(c.dataset.key, [...e.dataTransfer.files]); });
+document.addEventListener('keydown', (e) => {
+  const ov = document.querySelector('.ovl');
+  if (e.key === 'Escape' && ov) { ov.remove(); return; }
+  if (e.key === 'Escape' && SIGN.el) { closeSign(); return; }
+  if (e.key === 'Escape' && ui.stack.length) closePanel();
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { const c = e.target.closest && e.target.closest('.cmp'); if (c) sendMsg(c.dataset.key, 'comment'); }
+});
+window.addEventListener('hashchange', () => load(true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(false); });
+load(true);
+setInterval(() => load(false), 60000);
+setInterval(stamp, 30000);
+</script>
+</body>
+</html>
