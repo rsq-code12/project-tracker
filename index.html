@@ -1047,7 +1047,8 @@ async function load(first) {
   if (first && !new URLSearchParams(location.hash.slice(1)).get('k') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
     try {
       const j = await (await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
-      if (j.url) { location.replace(j.url); return; }
+      const u = j.preview || j.url;
+      if (u) { location.replace('/site/' + new URL(u).hash); return; }
     } catch {}
   }
   try {
