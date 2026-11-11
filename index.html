@@ -562,7 +562,7 @@ const SIGN = { el: null, doc: null, step: 'read', mode: 'draw', strokes: [], typ
 const signedMsg = (docId) => (FB.on ? thread(`doc:${docId}`).filter((m) => m.kind === 'signature' || m.kind === 'signed-doc').pop() : null);
 let SIGNDOC = null;
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const payDone = (docId) => B.access.some((a) => a.sign === docId && a.status === 'received');
+const payDone = (docId) => !!(B.payment && B.payment.paid) || B.access.some((a) => a.sign === docId && a.status === 'received');
 function signCard(docId) {
   const d = docById(docId); if (!d || !d.html) return '';
   const s = signedMsg(docId), pay = B.payment, showPay = pay && !payDone(docId);
