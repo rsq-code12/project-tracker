@@ -806,7 +806,7 @@ function compute() {
   const needNow = [
     ...B.access.filter((a) => ['asked', 'waiting'].includes(a.status)).map(aItem),
     ...team.filter((t) => t.status !== 'done' && (t.start <= addDays(today, 3) || t.status === 'waiting')).map((t) => tItem(t, fromTeam(t), 'user')),
-    ...inputs.filter((t) => t.start <= today || t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
+    ...inputs.filter((t) => t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
   ].sort(byBy);
   const seen = new Set(needNow.map((n) => n.kind + n.id));
   const horizon = addDays(today, 21);
