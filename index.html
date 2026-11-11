@@ -1043,6 +1043,15 @@ function closePanel() {
 
 /* ---------- Render + live ---------- */
 function paintPage() { C = compute(); const y = window.scrollY; $('#app').innerHTML = page(C); window.scrollTo(0, y); stamp(); }
+// A link can open a section directly: ?open=questions (or needs, updates, docs, about, message, q:ID, task:ID, doc:ID, access:ID).
+function openFromLink() {
+  const o = new URLSearchParams(location.search).get('open') || new URLSearchParams(location.hash.slice(1)).get('open');
+  if (!o) return;
+  const [type, id] = o.split(':');
+  if (['needs', 'updates', 'docs', 'about', 'message', 'questions'].includes(type) && !id) return openPanel(type);
+  if (type === 'q' && qById(id)) { openPanel('questions'); return openPanel('question', id, true); }
+  if ((type === 'task' && byId(id)) || (type === 'doc' && docById(id)) || (type === 'access' && accessById(id))) return openPanel(type, id);
+}
 function render() {
   C = compute();
   document.title = `${C.M.project} · Project tracker`;
@@ -1079,7 +1088,7 @@ async function load(first) {
     const d = await getData();
     const changed = first || d.generatedAt !== lastGen;
     if (changed) { B = d; lastGen = d.generatedAt; }
-    if (first) { await fbInit(); render(); if (await fbSync()) render(); return; }
+    if (first) { await fbInit(); render(); openFromLink(); if (await fbSync()) render(); return; }
     const added = await fbSync();
     if (changed || added) {
       render();
