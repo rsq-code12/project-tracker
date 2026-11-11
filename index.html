@@ -258,6 +258,15 @@
   .pad canvas { display: block; width: 100%; height: 200px; border-radius: 14px; cursor: crosshair; touch-action: none; }
   .pad::after { content: ''; position: absolute; left: 24px; right: 24px; bottom: 50px; border-bottom: 1px dashed #CBD0D6; pointer-events: none; }
   .pad-x { position: absolute; top: 8px; right: 8px; font-size: 12.5px; color: #4B5563; padding: 4px 10px; border-radius: 99px; background: #F3F4F6; z-index: 1; }
+  .sd-confirm { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--hover); display: grid; gap: 6px; }
+  .sd-confirm b { font-size: 14px; } .sd-confirm span { display: flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--ink2); overflow-wrap: anywhere; } .sd-confirm span svg { width: 15px; height: 15px; color: var(--muted); }
+  .sd-confirm .action-b { margin-top: 6px; }
+  .field-in { height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); outline: none; }
+  .link-btn { color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .file-link { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 13.5px; text-decoration: none; }
+  .file-link svg { width: 16px; height: 16px; color: var(--muted); }
+  .pad-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13.5px; color: #9CA3AF; pointer-events: none; }
+  .up-sig { margin-top: 12px; } .up-sig .btn { cursor: pointer; } .up-sig .btn svg { width: 16px; height: 16px; } .up-sig p { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
   .field { display: block; margin-top: 14px; } .field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
   .field input { width: 100%; height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; font: inherit; color: var(--ink); background: var(--surface); outline: none; } .field input:focus { border-color: var(--ink2); }
   .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink2); margin-right: auto; max-width: 520px; cursor: pointer; } .consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ink); flex: none; }
@@ -422,8 +431,8 @@ function stampAt(iso) {
   return d.toDateString() === new Date().toDateString() ? `Today, ${t}` : `${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${t}`;
 }
 function msgHtml(m) {
-  const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : '')).join('');
-  return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
+  const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : `<a class="file-link" href="${fileUrl(m, i)}" target="_blank" rel="noopener" download="${esc(f.name || 'document')}">${svg('doc')}${esc(f.name || 'Document')}</a>`)).join('');
+  return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : m.kind === 'signed-doc' ? '<span class="ok-tag">Signed copy</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
 }
 const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'; };
 function filesHtml(key) {
@@ -550,20 +559,31 @@ async function sendMsg(key, kind) {
 
 /* ---------- Sign the scope, then pay ---------- */
 const SIGN = { el: null, doc: null, step: 'read', mode: 'draw', strokes: [], typed: '', name: '', png: null, at: null, cv: null, redraw: null };
-const signedMsg = (docId) => (FB.on ? thread(`doc:${docId}`).filter((m) => m.kind === 'signature').pop() : null);
+const signedMsg = (docId) => (FB.on ? thread(`doc:${docId}`).filter((m) => m.kind === 'signature' || m.kind === 'signed-doc').pop() : null);
+let SIGNDOC = null;
+const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const payDone = (docId) => B.access.some((a) => a.sign === docId && a.status === 'received');
 function signCard(docId) {
   const d = docById(docId); if (!d || !d.html) return '';
   const s = signedMsg(docId), pay = B.payment, showPay = pay && !payDone(docId);
   if (!FB.on) return `<div class="action"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>${FB.why === 'nokey' ? 'Open the private link you were sent to sign it here.' : 'Signing here will be available shortly. Until then, the PDF can be signed as usual.'}</span></div></div></div>`;
-  if (s) return `<div class="action done"><div class="action-h"><span class="action-ic">${svg('check')}</span><div><b>Signed by ${esc(s.author)}</b><span>${stampAt(s.at)}. The signed PDF will follow.</span></div></div>
-    <div class="action-b">${showPay ? `<a class="btn" href="${esc(pay.url)}" target="_blank" rel="noopener noreferrer">${esc(pay.label)} · ${esc(pay.amount)}</a>` : ''}<button class="btn ghost" data-sign-view="${docId}">View signed copy</button></div>
+  if (s) {
+    const up = s.kind === 'signed-doc';
+    const view = up ? `<a class="btn ghost" href="${fileUrl(s, 0)}" target="_blank" rel="noopener">View signed copy</a>` : `<button class="btn ghost" data-sign-view="${docId}">View signed copy</button>`;
+    return `<div class="action done"><div class="action-h"><span class="action-ic">${svg('check')}</span><div><b>${up ? 'Signed copy received from' : 'Signed by'} ${esc(s.author)}</b><span>${stampAt(s.at)}.${up ? ' Thank you.' : ' The signed PDF will follow.'}</span></div></div>
+    <div class="action-b">${showPay ? `<a class="btn" href="${esc(pay.url)}" target="_blank" rel="noopener noreferrer">${esc(pay.label)} · ${esc(pay.amount)}</a>` : ''}${view}</div>
     ${showPay ? `<p class="action-n">${esc(pay.detail)}</p>` : ''}</div>`;
-  return `<div class="action todo"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>Read it here, add your signature and approve. It takes about two minutes.</span></div></div><div class="action-b"><button class="btn" data-sign="${docId}">Review and sign</button></div></div>`;
+  }
+  const pend = SIGNDOC && SIGNDOC.docId === docId ? SIGNDOC : null;
+  const upload = pend ? `<div class="sd-confirm"><b>Ready to send</b>${pend.files.map((f) => `<span>${svg('doc')}${esc(f.name)} · ${kb(f.size)}</span>`).join('')}
+      ${myName() ? '' : '<input class="field-in" id="sdname" placeholder="Your name" autocomplete="name">'}
+      <div class="action-b"><button class="btn" data-sdsend="${docId}" ${pend.sending ? 'disabled' : ''}>${pend.sending ? 'Sending…' : 'Send signed copy'}</button><button class="btn ghost" data-sdcancel ${pend.sending ? 'disabled' : ''}>Cancel</button></div></div>`
+    : `<p class="action-n">Already signed the PDF? <label class="link-btn">Upload the signed copy<input type="file" accept="application/pdf,image/*" multiple hidden data-signeddoc="${docId}"></label> instead.</p>`;
+  return `<div class="action todo"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>Read it here, add your signature and approve. It takes about two minutes.</span></div></div><div class="action-b"><button class="btn" data-sign="${docId}">Review and sign</button></div>${upload}</div>`;
 }
 function openSign(docId, viewOnly) {
   const d = docById(docId); if (!d || !d.html) return;
-  Object.assign(SIGN, { doc: d, step: viewOnly ? 'view' : 'read', mode: 'draw', strokes: [], typed: '', name: SIGN.name || myName(), png: null, at: null });
+  Object.assign(SIGN, { doc: d, step: viewOnly ? 'view' : 'read', mode: 'draw', strokes: [], typed: '', upload: null, name: SIGN.name || myName(), png: null, at: null });
   if (viewOnly) { const m = signedMsg(docId); if (m) { SIGN.png = m.files && m.files[0] ? fileUrl(m, 0) : null; SIGN.name = m.author; SIGN.at = m.at; } }
   if (!document.getElementById('sigfont')) { const l = document.createElement('link'); l.id = 'sigfont'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap'; document.head.appendChild(l); }
   SIGN.el = document.createElement('div'); SIGN.el.className = 'sign'; SIGN.el.setAttribute('role', 'dialog'); SIGN.el.setAttribute('aria-modal', 'true');
@@ -591,10 +611,11 @@ function paintSign() {
     body = `<article class="doc">${st === 'view' ? withSignature(d.html) : d.html}</article>`;
     foot = st === 'view' ? `<span class="hint">The copy you signed in the tracker.</span><button class="btn ghost" data-s="close">Close</button>` : `<span class="hint">Take your time. You sign at the end.</span><button class="btn" data-s="pad">Add my signature</button>`;
   } else if (st === 'pad') {
-    body = `<div class="pad-wrap"><h2>Your signature</h2><p>Sign with your finger or mouse, or type your name.</p>
-      <div class="seg"><button data-s="mode-draw" class="${SIGN.mode === 'draw' ? 'on' : ''}">Draw</button><button data-s="mode-type" class="${SIGN.mode === 'type' ? 'on' : ''}">Type</button></div>
-      <div class="pad"><button class="pad-x" data-s="clear">Clear</button><canvas id="sigpad" aria-label="Signature area"></canvas></div>
+    body = `<div class="pad-wrap"><h2>Your signature</h2><p>Sign with your finger or mouse, type your name, or upload an image of your signature.</p>
+      <div class="seg"><button data-s="mode-draw" class="${SIGN.mode === 'draw' ? 'on' : ''}">Draw</button><button data-s="mode-type" class="${SIGN.mode === 'type' ? 'on' : ''}">Type</button><button data-s="mode-upload" class="${SIGN.mode === 'upload' ? 'on' : ''}">Upload</button></div>
+      <div class="pad"><button class="pad-x" data-s="clear">Clear</button><canvas id="sigpad" aria-label="Signature area"></canvas>${SIGN.mode === 'upload' && !SIGN.upload ? '<span class="pad-empty">Your uploaded signature will appear here</span>' : ''}</div>
       ${SIGN.mode === 'type' ? `<label class="field"><span>Type your signature</span><input id="sigtype" value="${esc(SIGN.typed)}" placeholder="Your name" autocomplete="name"></label>` : ''}
+      ${SIGN.mode === 'upload' ? `<div class="up-sig"><label class="btn ghost">${svg('image')}${SIGN.upload ? 'Choose a different image' : 'Choose a signature image'}<input type="file" accept="image/*" id="sigfile" hidden></label><p>A photo or scan of your signature on white paper works best. The white background is removed automatically.</p></div>` : ''}
       <label class="field"><span>Your full name</span><input id="signame" value="${esc(SIGN.name)}" placeholder="Full name" autocomplete="name"></label></div>`;
     foot = `<button class="btn ghost" data-s="read">Back</button><button class="btn" data-s="review">Preview the signed copy</button>`;
   } else if (st === 'review') {
@@ -620,11 +641,17 @@ function setupPad() {
   const redraw = () => {
     ctx.clearRect(0, 0, r.width, r.height);
     ctx.fillStyle = ctx.strokeStyle = '#111827'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.4;
+    if (SIGN.mode === 'upload') {
+      const u = SIGN.upload; if (!u) return;
+      const pad = 18, k = Math.min((r.width - pad * 2) / u.width, (r.height - pad * 2) / u.height, 1.5), w = u.width * k, h = u.height * k;
+      ctx.drawImage(u, (r.width - w) / 2, (r.height - h) / 2, w, h); return;
+    }
     if (SIGN.mode === 'type') { const size = Math.max(28, Math.min(58, (r.width - 56) / Math.max(4, SIGN.typed.length * 0.5))); ctx.font = `600 ${size}px Caveat, 'Segoe Script', 'Brush Script MT', cursive`; ctx.fillText(SIGN.typed, 28, r.height - 58); return; }
     for (const s of SIGN.strokes) { ctx.beginPath(); s.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); if (s.length === 1) ctx.lineTo(s[0].x + 0.1, s[0].y + 0.1); ctx.stroke(); }
   };
   SIGN.cv = cv; SIGN.redraw = redraw; redraw();
-  if (SIGN.mode === 'draw') {
+  if (SIGN.mode === 'upload') { /* image chosen through #sigfile */ }
+  else if (SIGN.mode === 'draw') {
     let cur = null;
     const pt = (e) => { const b = cv.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
     cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pt(e)]; SIGN.strokes.push(cur); redraw(); });
@@ -649,16 +676,51 @@ function sigPng() {
   out.getContext('2d').drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
   return out.toDataURL('image/png');
 }
+async function sendSignedDoc(docId) {
+  const p = SIGNDOC, d = docById(docId); if (!p || !d) return;
+  const nameEl = document.getElementById('sdname');
+  const name = (myName() || (nameEl && nameEl.value) || '').trim();
+  if (!name) { toast('Please add your name'); if (nameEl) nameEl.focus(); return; }
+  const files = []; let total = 0;
+  for (const f of p.files) { const u8 = new Uint8Array(await f.arrayBuffer()); total += u8.length; files.push({ type: f.type || 'application/pdf', name: f.name, data: toB64(u8) }); }
+  if (total > 8 * 1024 * 1024) return toast('That is too large (8 MB at most). Please try a smaller PDF or fewer photos.');
+  if (!myName()) store.set('tracker.name', name);
+  p.sending = true; drawPanel(true);
+  try {
+    await fbSend({ v: 1, item: `doc:${docId}`, author: name, role: 'client', kind: 'signed-doc', text: `Uploaded the signed ${d.title}.`, at: new Date().toISOString(), files, doc: { id: d.id, title: d.title, version: d.version } });
+    SIGNDOC = null;
+    toast('Thank you. Your signed copy has been sent.');
+  } catch (e) { toast(e.message); p.sending = false; }
+  drawPanel(true); paintPage();
+}
+async function loadSigFile(file) {
+  if (!file || !/^image\//.test(file.type)) return toast('Please choose an image file');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height);
+    const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const l = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+      if (l > 205) p[i + 3] = 0; else if (l > 150) p[i + 3] = Math.round(p[i + 3] * (205 - l) / 55);
+    }
+    x.putImageData(d, 0, 0);
+    SIGN.upload = c;
+    paintSign();
+  } catch { toast('Could not read that image'); } finally { URL.revokeObjectURL(url); }
+}
 async function signAction(a) {
   if (a === 'close') return closeSign();
   if (a === 'read' || a === 'pad') { SIGN.step = a; return paintSign(); }
-  if (a === 'mode-draw' || a === 'mode-type') { SIGN.mode = a.slice(5); return paintSign(); }
-  if (a === 'clear') { SIGN.strokes = []; SIGN.typed = ''; const i = SIGN.el.querySelector('#sigtype'); if (i) i.value = ''; return SIGN.redraw && SIGN.redraw(); }
+  if (a === 'mode-draw' || a === 'mode-type' || a === 'mode-upload') { const n = SIGN.el.querySelector('#signame'); if (n) SIGN.name = n.value; SIGN.mode = a.slice(5); return paintSign(); }
+  if (a === 'clear') { SIGN.strokes = []; SIGN.typed = ''; if (SIGN.mode === 'upload' && SIGN.upload) { SIGN.upload = null; return paintSign(); } const i = SIGN.el.querySelector('#sigtype'); if (i) i.value = ''; return SIGN.redraw && SIGN.redraw(); }
   if (a === 'review') {
     SIGN.name = (SIGN.el.querySelector('#signame').value || '').trim();
     if (!SIGN.name) return toast('Please add your full name');
     const png = sigPng();
-    if (!png) return toast(SIGN.mode === 'type' ? 'Please type your signature' : 'Please sign in the box');
+    if (!png) return toast(SIGN.mode === 'type' ? 'Please type your signature' : SIGN.mode === 'upload' ? 'Please upload an image of your signature' : 'Please sign in the box');
     SIGN.png = png; SIGN.at = null; SIGN.step = 'review'; return paintSign();
   }
   if (a === 'approve') {
@@ -1010,6 +1072,8 @@ async function load(first) {
 /* ---------- Events ---------- */
 document.addEventListener('click', (e) => {
   const t = e.target;
+  const sds = t.closest('[data-sdsend]'); if (sds) return sendSignedDoc(sds.dataset.sdsend);
+  if (t.closest('[data-sdcancel]')) { SIGNDOC = null; return drawPanel(true); }
   const sa = t.closest('[data-s]'); if (sa && SIGN.el && SIGN.el.contains(sa)) return signAction(sa.dataset.s);
   const sg = t.closest('[data-sign]'); if (sg) return openSign(sg.dataset.sign);
   const sv = t.closest('[data-sign-view]'); if (sv) return openSign(sv.dataset.signView, true);
@@ -1040,7 +1104,14 @@ document.addEventListener('click', (e) => {
   const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);
 });
 document.addEventListener('input', (e) => { const c = e.target.closest && e.target.closest('.cmp'); if (c && e.target.classList.contains('cmp-text')) draft(c.dataset.key).text = e.target.value; });
-document.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.pick) { addImages(e.target.dataset.pick, [...e.target.files]); e.target.value = ''; } });
+document.addEventListener('change', (e) => {
+  if (e.target.dataset && e.target.dataset.signeddoc) {
+    const files = [...e.target.files].filter((f) => f.type === 'application/pdf' || /^image\//.test(f.type));
+    e.target.value = '';
+    if (!files.length) return toast('Please choose a PDF or photos of the signed pages');
+    SIGNDOC = { docId: e.target.dataset.signeddoc, files }; drawPanel(true); return;
+  }
+  if (e.target.id === 'sigfile') { loadSigFile(e.target.files[0]); e.target.value = ''; return; } if (e.target.dataset && e.target.dataset.pick) { addImages(e.target.dataset.pick, [...e.target.files]); e.target.value = ''; } });
 document.addEventListener('paste', (e) => {
   const c = e.target.closest && e.target.closest('.cmp'); if (!c) return;
   const imgs = [...(e.clipboardData ? e.clipboardData.items : [])].filter((it) => it.kind === 'file' && it.type.startsWith('image/')).map((it) => it.getAsFile()).filter(Boolean);
