@@ -438,7 +438,8 @@ const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(
 function filesHtml(key) {
   return draft(key).files.map((f, i) => (/^image\//.test(f.type)
     ? `<div class="att"><img src="${f.url}" alt="Image to send"><div class="att-a"><button data-act="crop" data-key="${key}" data-i="${i}">Crop</button><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove image">${svg('x')}</button></div></div>`
-    : `<div class="att audio"><audio controls src="${f.url}"></audio><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove voice note">${svg('x')}</button></div>`)).join('');
+    : /^audio\//.test(f.type) ? `<div class="att audio"><audio controls src="${f.url}"></audio><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove voice note">${svg('x')}</button></div>`
+    : `<div class="att audio"><span class="file-link" style="margin:0">${svg('doc')}${esc(f.name)}</span><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove file">${svg('x')}</button></div>`)).join('');
 }
 function composerHtml(key) {
   const d = draft(key), r = rec && rec.key === key, s = FB.sending === key;
@@ -447,7 +448,7 @@ function composerHtml(key) {
     <textarea class="cmp-text" rows="3" maxlength="4000" placeholder="Write a comment. You can paste a screenshot here too.">${esc(d.text)}</textarea>
     <div class="cmp-files">${filesHtml(key)}</div>
     <div class="cmp-bar">
-      <label class="cmp-b" title="Add an image">${svg('image')}<span>Image</span><input type="file" accept="image/*" multiple hidden data-pick="${key}"></label>
+      <label class="cmp-b" title="Add an image">${svg('image')}<span>Image or file</span><input type="file" accept="image/*,application/pdf" multiple hidden data-pick="${key}"></label>
       <button class="cmp-b ${r ? 'rec' : ''}" data-act="voice" data-key="${key}" title="Record a voice note">${r ? `<i class="rdot"></i><b class="rtime">${fmtDur((Date.now() - rec.t0) / 1000)}</b><span>Stop</span>` : `${svg('mic')}<span>Voice note</span>`}</button>
       ${approvable[key] ? `<button class="cmp-b ok ${approveArm === key ? 'armed' : ''}" data-act="approve" data-key="${key}">${svg('check')}<span>${approveArm === key ? 'Tap again to approve' : 'Approve'}</span></button>` : ''}
       <button class="cmp-send" data-act="send" data-key="${key}" ${s ? 'disabled' : ''}>${s ? 'Sending…' : 'Send'}</button>
@@ -476,7 +477,9 @@ async function shrink(blob, max = 1800) {
 }
 async function addImages(key, files) {
   for (const file of files) {
-    if (!file || !/^image\//.test(file.type)) continue;
+    if (!file) continue;
+    if (file.type === 'application/pdf') { draft(key).files.push({ type: file.type, name: file.name || 'Document.pdf', blob: file, url: URL.createObjectURL(file) }); continue; }
+    if (!/^image\//.test(file.type)) { toast('Please attach an image or a PDF'); continue; }
     try { const blob = await shrink(file); draft(key).files.push({ type: blob.type, name: file.name || 'Screenshot', blob, url: URL.createObjectURL(blob) }); }
     catch { toast('Could not read that image'); }
   }
@@ -738,6 +741,8 @@ async function signAction(a) {
 const byId = (id) => B.tasks.find((t) => t.id === id);
 const accessById = (id) => B.access.find((a) => a.id === id);
 const docById = (id) => (B.documents || []).find((d) => d.id === id);
+const qById = (id) => (B.questions || []).find((q) => q.id === id);
+const answered = (id) => FB.on && thread(`q:${id}`).some((m) => m.role === 'client');
 const phaseOf = (id) => B.phases.find((p) => p.id === id) || { name: '', color: '#999' };
 const who = (o) => (B.meta.owners || {})[o] || o;
 const lead = () => ((B.contact && B.contact.name) || 'us').split(' ')[0];
@@ -808,6 +813,8 @@ function compute() {
     ...team.filter((t) => t.status !== 'done' && (t.start <= addDays(today, 3) || t.status === 'waiting')).map((t) => tItem(t, fromTeam(t), 'user')),
     ...inputs.filter((t) => t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
   ].sort(byBy);
+  const qOpen = (B.questions || []).filter((q) => !answered(q.id));
+  if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: `Your input · ${qOpen.length} to answer`, by: (B.questions[0] || {}).due || null });
   const seen = new Set(needNow.map((n) => n.kind + n.id));
   const horizon = addDays(today, 21);
   const needSoon = [
@@ -829,7 +836,7 @@ function compute() {
     ...tasks.filter((t) => t.startedOn && t.status !== 'done').map((t) => ({ date: t.startedOn, kind: 'start', id: t.id, text: t.title })),
   ].sort((a, b) => b.date.localeCompare(a.date) || (a.kind === 'update' ? -1 : 1));
   const nextMs = (B.milestones || []).map(byId).filter(Boolean).find((t) => t.status !== 'done');
-  return { M, tasks, done, open, pct, needNow, needSoon, needDone, health, launched, feed, nextMs };
+  return { qOpen, M, tasks, done, open, pct, needNow, needSoon, needDone, health, launched, feed, nextMs };
 }
 
 /* ---------- Pieces ---------- */
@@ -839,7 +846,7 @@ function taskRow(t) {
 }
 function needRow(n, tone = '') {
   const w = tone === 'done' ? { text: 'Received', cls: 'done' } : byWhen(n.by);
-  const attr = n.kind === 'access' ? `data-access="${n.id}"` : `data-task="${n.id}"`;
+  const attr = n.kind === 'access' ? `data-access="${n.id}"` : n.kind === 'view' ? `data-view="${n.id}"` : `data-task="${n.id}"`;
   return `<button class="row" ${attr}><span class="kind ${tone}">${svg(tone === 'done' ? 'check' : n.icon)}</span><span class="row-t">${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
 }
 function feedRow(f) {
@@ -878,6 +885,7 @@ function page(c) {
       <div class="live" id="live"><span class="pulse"></span><span id="ago"></span></div></div>
     <nav class="quick" aria-label="Sections">
       <button class="qb" data-view="needs">${svg('list')}Needed from you${c.needNow.length ? ` <span class="count">${c.needNow.length}</span>` : ''}</button>
+      ${(B.questions || []).length ? `<button class="qb" data-view="questions">${svg('chat')}Questions${c.qOpen.length ? ` <span class="count">${c.qOpen.length}</span>` : ' ✓'}</button>` : ''}
       <button class="qb" data-view="updates">${svg('clock')}Updates</button>
       <button class="qb" data-view="docs">${svg('doc')}Documents</button>
       <button class="qb" data-view="about">${svg('info')}How we work</button>
@@ -967,6 +975,21 @@ function vDoc(d) {
   h += `<div class="note info"><h4>Where to find it</h4><p>${esc(lead())} sends documents as PDF. If anything needs changing, comment below or send a voice note.</p></div>`;
   return h + commentsHtml(`doc:${d.id}`, false);
 }
+function vQuestions() {
+  const qs = B.questions || [];
+  const left = qs.filter((q) => !answered(q.id)).length;
+  return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
+    <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, in any order. You can attach files too. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
+    <div class="p-list">${qs.map((q, i) => { const ok = answered(q.id); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${ok ? 'Answered' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>`;
+}
+function vQuestion(q) {
+  const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
+  let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}</div><h3>${esc(q.q)}</h3>`;
+  if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
+  h += commentsHtml(`q:${q.id}`, false, 'Your answer');
+  if (next) h += `<div class="action-b" style="margin-top:16px"><button class="btn ghost" data-q="${next.id}">Next question</button></div>`;
+  return h;
+}
 function vMessage() {
   return `<div class="p-eye">${svg('chat', 'ic')}Messages</div><h3>Message ${esc(lead())}</h3>
     <p class="p-empty" style="color:var(--ink2)">Ask anything, or send a screenshot or a voice note. To comment on a specific task, open the task and use the comments there.</p>
@@ -993,8 +1016,9 @@ function drawPanel(keep) {
   if (cur.type === 'task') { const t = byId(cur.id); if (!t) return closePanel(); html = vTask(t); }
   else if (cur.type === 'access') { const a = accessById(cur.id); if (!a) return closePanel(); html = vAccess(a); }
   else if (cur.type === 'phase') { const p = B.phases.find((x) => x.id === cur.id); if (!p) return closePanel(); html = vPhase(p); }
+  else if (cur.type === 'question') { const q = qById(cur.id); if (!q) return closePanel(); html = vQuestion(q); }
   else if (cur.type === 'doc') { const d = docById(cur.id); if (!d) return closePanel(); html = vDoc(d); }
-  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage }[cur.type]();
+  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, questions: vQuestions }[cur.type]();
   const top = keep ? ($('.p-body', el) || {}).scrollTop || 0 : 0;
   el.innerHTML = `<div class="p-bar">${ui.stack.length > 1 ? `<button class="p-btn" data-back>${svg('back')}Back</button>` : '<span></span>'}<button class="p-btn" data-close aria-label="Close">${svg('x')}</button></div><div class="p-body">${html}</div>`;
   $('.p-body', el).scrollTop = top;
@@ -1100,6 +1124,7 @@ document.addEventListener('click', (e) => {
   const tk = t.closest('[data-task]'); if (tk) return openPanel('task', tk.dataset.task, inPanel);
   const ac = t.closest('[data-access]'); if (ac) return openPanel('access', ac.dataset.access, inPanel);
   const ph = t.closest('[data-phase]'); if (ph) return openPanel('phase', ph.dataset.phase, inPanel);
+  const qq = t.closest('[data-q]'); if (qq) return openPanel('question', qq.dataset.q, inPanel);
   const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
   const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);
 });
