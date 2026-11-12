@@ -359,6 +359,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
+const PAGE_VERSION = '62d94a60f12c'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1124,6 +1125,12 @@ async function load(first) {
   }
   try {
     const d = await getData();
+    // A newer version of this page has been published: reload once (an open tab otherwise keeps running old code),
+    // unless something is being typed, recorded or signed. The ?v= makes the browser fetch the new page.
+    if (d.pageVersion && /^[a-f0-9]{12}$/.test(PAGE_VERSION) && d.pageVersion !== PAGE_VERSION && !composing() && !SIGN.el) {
+      let tried = null; try { tried = sessionStorage.getItem('tracker.reloaded'); } catch {}
+      if (tried !== d.pageVersion) { try { sessionStorage.setItem('tracker.reloaded', d.pageVersion); } catch {} const u = new URL(location.href); u.searchParams.set('v', d.pageVersion); location.replace(u.toString()); return; }
+    }
     const changed = first || d.generatedAt !== lastGen;
     if (changed) { B = d; lastGen = d.generatedAt; }
     if (first) { await fbInit(); render(); openFromLink(); if (await fbSync()) render(); return; }
