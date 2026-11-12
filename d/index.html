@@ -326,7 +326,7 @@ function row(t, extra = '') {
     <div><div class="rt"><b>${t.id}</b>${esc(t.title)}</div>
       <div class="rs"><span class="dot" style="background:${p.color}"></span>${esc(p.name)} · ${range(t)} · ${t.est || 0} h
         ${t.priority === 'P1' ? '<span class="tag P1">P1</span>' : ''}${t.status === 'doing' ? '<span class="tag doing">doing</span>' : ''}${t.status === 'waiting' ? '<span class="tag wait">waiting</span>' : ''}
-        ${t.owner !== 'me' ? `<span class="tag">${OWNERS[t.owner] || t.owner}</span>` : ''}${t.visibility === 'private' ? '<span class="tag priv">private</span>' : ''}${isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${extra}</div></div>
+        ${t.owner !== 'me' ? `<span class="tag">${OWNERS[t.owner] || t.owner}</span>` : ''}${t.visibility === 'private' ? '<span class="tag priv">private</span>' : ''}${t.suggested ? '<span class="tag cond">suggested</span>' : ''}${isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${extra}</div></div>
     <div class="rprog">${n ? `<div class="mini"><i style="width:${(k / n) * 100}%"></i></div>${k}/${n}` : ''}</div>
   </div>`;
 }
@@ -356,6 +356,7 @@ function briefing() {
   const hello = a.day !== D.today ? `Your plan for ${fmt(a.day)}` : hr < 12 ? 'Good morning, Ranjeet. Here is your day.' : hr < 17 ? 'Good afternoon, Ranjeet. Here is the rest of your day.' : 'Good evening, Ranjeet. Here is where things stand.';
   const out = [];
   if (D.inbox && D.inbox.unread) out.push(`<b>Reply to the client first:</b> ${D.inbox.unread} new message${D.inbox.unread === 1 ? '' : 's'} in the <span class="tid" data-goinbox>Inbox</span>. Same-day replies are part of the scope.`);
+  { const sug = D.tasks.filter((t) => t.suggested && !['done', 'skipped'].includes(t.status)); if (sug.length) out.push(`<b>Suggested from the client's messages:</b> ${sug.map((t) => `${tid(t.id)} ${esc(t.title)}`).join('; ')}. Open each one: keep it (make it shared if the client should see it), change it, or skip it.`); }
   if (a.overdue.length) out.push(`<b>Clear the overdue work first:</b> ${a.overdue.map((id) => `${tid(id)} ${esc(task(id).title)}`).join('; ')}. Finish it, or move the date and tell the client today if it affects her.`);
   if (na) {
     const t = task(na.id), why = (t.brief?.why || '').split(/(?<=\.)\s/)[0];
@@ -478,6 +479,11 @@ async function loadInbox() {
     if (ids.length && state.view === 'inbox') setTimeout(() => fetch('/api/feedback/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) }).then(() => refresh()), 2500);
   } catch { toast('Could not load the inbox'); }
 }
+function triageHtml(m) {
+  const t = (D.triage || []).find((x) => x.msg === m.id);
+  if (!t || m.role === 'lead') return '';
+  return `<div style="margin-top:8px;padding:10px 12px;border-radius:10px;background:#eef4ff;font-size:13.5px;line-height:1.5"><b>Next steps (auto):</b> ${esc(t.summary)}${t.urgent ? ' <span class="tag P1">urgent</span>' : ''}${(t.tasks || []).length ? `<br><b>Suggested tasks:</b> ${t.tasks.map((id) => tid(id)).join(', ')}` : ''}${t.reply ? `<div style="margin-top:6px"><b>Reply draft:</b> ${esc(t.reply)} <button data-usereply="${esc(m.item)}" data-text="${esc(t.reply)}" style="margin-left:6px">Use this reply</button></div>` : ''}</div>`;
+}
 function viewInbox() {
   const I = state.inbox;
   if (!I) { loadInbox(); return '<h1>Inbox</h1><p class="sub">Loading…</p>'; }
@@ -490,6 +496,7 @@ function viewInbox() {
       ${msgs.map((m) => `<div class="im ${m.role === 'lead' ? 'me' : ''} ${m.unread ? 'new' : ''}"><div class="im-h"><b>${esc(m.author)}</b><small>${new Date(m.at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</small>${tag(m)}${m.unread ? '<span class="tag P1">new</span>' : ''}</div>
         ${m.text ? `<div class="im-t">${esc(m.text)}</div>` : ''}
         ${m.files.map((f) => (/^image\//.test(f.type) ? `<a href="${f.url}" target="_blank" rel="noopener"><img class="im-img" src="${f.url}" alt="Attachment"></a>` : /^audio\//.test(f.type) ? `<audio controls src="${f.url}"></audio>` : `<p style="margin:8px 0 0"><a href="${f.url}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600">Open ${esc(f.name || 'file')} ↗</a></p>`)).join('')}
+        ${triageHtml(m)}
         ${m.kind === 'signature' ? `<p style="margin:10px 0 0"><button class="primary" data-mksign="${m.id}">Make the signed PDF</button> ${(D.signedPdfs || []).includes((m.doc && m.doc.id) || 'scope') ? `<a href="/api/signed-scope.pdf?doc=${esc((m.doc && m.doc.id) || 'scope')}" target="_blank" rel="noopener" style="margin-left:6px;color:var(--blue);font-weight:600">Open signed PDF ↗</a>` : ''} <small style="color:var(--muted);margin-left:6px">Then send her the PDF signed by both of us.</small></p>` : ''}
       </div>`).join('')}
       <div class="form" style="margin-top:12px"><textarea data-replytext="${esc(key)}" placeholder="Reply to the client. She'll see it on the tracker."></textarea><button class="primary" data-reply="${esc(key)}">Reply</button></div></div>`).join('') : '<div class="card empty">No messages yet. When the client comments on the tracker, it shows up here.</div>'}`;
@@ -515,7 +522,7 @@ function openItem(id, keepScroll) {
   const done = new Set(t.stepsDone || []);
   $('#dtop').innerHTML = `<div style="flex:1"><div class="eyebrow">${t.id}${p ? ' · ' + esc(p.name) : ' · Regular task'}</div><h2>${esc(t.title)}</h2>
     <div class="chips">${isTask ? `<span class="tag">${range(t)}</span><span class="tag">${OWNERS[t.owner] || t.owner}</span><span class="tag">${t.est || 0} h</span><span class="tag ${t.priority}">${t.priority}</span>` : ''}
-      ${t.visibility === 'private' ? '<span class="tag priv">private</span>' : '<span class="tag">shared with the client</span>'}${isTask && isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${t.client && t.client !== t.title ? `<span class="tag" title="What the client sees">the client sees: ${esc(t.client)}</span>` : ''}</div></div>
+      ${t.suggested ? '<span class="tag cond">suggested from a client message</span>' : ''}${t.visibility === 'private' ? '<span class="tag priv">private</span>' : '<span class="tag">shared with the client</span>'}${isTask && isCond(t) ? '<span class="tag cond">only if it comes to you</span>' : ''}${t.client && t.client !== t.title ? `<span class="tag" title="What the client sees">the client sees: ${esc(t.client)}</span>` : ''}</div></div>
     <button class="close" id="closeDrawer" aria-label="Close">×</button>`;
   const list = (arr) => `<ul class="clean">${arr.map((x) => `<li>${rich(x)}</li>`).join('')}</ul>`;
   let html = '';
@@ -570,6 +577,8 @@ document.addEventListener('click', (e) => {
   if (el.closest('[data-goinbox]')) { state.view = 'inbox'; state.inbox = null; return render(); }
   const rp = el.closest('[data-reply]');
   if (rp) { const key = rp.dataset.reply, ta = document.querySelector(`[data-replytext="${CSS.escape(key)}"]`), text = ta.value.trim(); if (!text) return toast('Write a reply first'); rp.disabled = true; return api('/api/feedback/reply', { item: key, text }).then(() => { toast('Reply sent'); state.inbox = null; render(); }).catch((e) => { rp.disabled = false; toast(e.message); }); }
+  const ur = el.closest('[data-usereply]');
+  if (ur) { const ta = document.querySelector(`[data-replytext="${CSS.escape(ur.dataset.usereply)}"]`); if (ta) { ta.value = ur.dataset.text; ta.focus(); } return; }
   const mk = el.closest('[data-mksign]');
   if (mk) { mk.disabled = true; mk.textContent = 'Making the PDF…'; return api('/api/sign-scope', { id: mk.dataset.mksign }).then((r) => { toast(r.versionMatches ? 'Signed PDF ready' : 'Signed PDF ready, but the document changed after signing: check it'); return refresh().then(() => window.open(`/api/signed-scope.pdf?doc=${encodeURIComponent(r.doc || 'scope')}`, '_blank')); }).catch((e) => { toast(e.message); mk.disabled = false; mk.textContent = 'Make the signed PDF'; }); }
   if (el.id === 'previewBtn') { const w = window.open('', '_blank'); return api('/api/share', {}).then((r) => { if (r.preview || r.url) w.location = r.preview || r.url; else { w.close(); toast(r.why); } }).catch((e) => { w.close(); toast(e.message); }); }
