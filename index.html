@@ -577,10 +577,12 @@ const SIGN = { el: null, doc: null, step: 'read', mode: 'draw', strokes: [], typ
 const signedMsg = (docId) => (FB.on ? thread(`doc:${docId}`).filter((m) => m.kind === 'signature' || m.kind === 'signed-doc').pop() : null);
 let SIGNDOC = null;
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const payDone = (docId) => !!(B.payment && B.payment.paid) || B.access.some((a) => a.sign === docId && a.status === 'received');
+// A document can carry its own payment (e.g. the first part of a quote); otherwise the tracker-wide one applies.
+const payFor = (docId) => { const d = docById(docId); return (d && d.payment) || B.payment; };
+const payDone = (docId) => { const d = docById(docId); if (d && d.payment) return !!d.payment.paid; return !!(B.payment && B.payment.paid) || B.access.some((a) => a.sign === docId && a.status === 'received'); };
 function signCard(docId) {
   const d = docById(docId); if (!d || !d.html) return '';
-  const s = signedMsg(docId), pay = B.payment, showPay = pay && !payDone(docId);
+  const s = signedMsg(docId), pay = payFor(docId), showPay = pay && !payDone(docId);
   if (!FB.on) return `<div class="action"><div class="action-h"><span class="action-ic">${svg('pen')}</span><div><b>Sign the ${esc(d.title)}</b><span>${FB.why === 'nokey' ? 'Open the private link you were sent to sign it here.' : 'Signing here will be available shortly. Until then, the PDF can be signed as usual.'}</span></div></div></div>`;
   if (s) {
     const up = s.kind === 'signed-doc';
@@ -637,7 +639,7 @@ function paintSign() {
     body = `<article class="doc">${withSignature(d.html, true)}</article>`;
     foot = `<p class="consent">By tapping <b>I approve</b>, you agree to this ${esc(d.title)} and to signing it electronically.</p><button class="btn ghost" data-s="pad">Change signature</button><button class="btn" data-s="approve" id="approveBtn">I approve</button>`;
   } else {
-    const pay = B.payment;
+    const pay = payFor(d.id);
     body = `<div class="done-wrap"><div class="done-ic">${svg('check')}</div><h2>Thank you, it's signed</h2><p>I'll add your signature to the PDF and send you the signed copy.</p>
       ${pay && !payDone(d.id) ? `<div class="pay-card"><b>Next step</b><span>${esc(pay.detail)}</span><a class="btn" href="${esc(pay.url)}" target="_blank" rel="noopener noreferrer">${esc(pay.label)} · ${esc(pay.amount)}</a></div>` : ''}</div>`;
     foot = `<button class="btn ghost" data-s="close">Done</button>`;
