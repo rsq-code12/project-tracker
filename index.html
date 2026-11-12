@@ -372,7 +372,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '1edb1c32c5f0'; // set when the tracker is published
+const PAGE_VERSION = '78d2de2b9987'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -919,7 +919,7 @@ function page(c) {
     <nav class="quick" aria-label="Sections">
       <button class="qb" data-view="needs">${svg('list')}Needed from you${c.needNow.length ? ` <span class="count">${c.needNow.length}</span>` : ''}</button>
       ${(B.questions || []).length ? `<button class="qb" data-view="questions">${svg('chat')}Questions${c.qOpen.length ? ` <span class="count">${c.qOpen.length}</span>` : ' ✓'}</button>` : ''}
-      <button class="qb" data-view="weekly">${svg('week')}Weekly update</button>
+      <button class="qb" data-view="weekly">${svg('week')}This week</button>
       <button class="qb" data-view="try">${svg('phone')}Try it</button>
       <button class="qb" data-view="updates">${svg('clock')}Updates</button>
       <button class="qb" data-view="docs">${svg('doc')}Documents</button>
@@ -996,30 +996,40 @@ function vNeeds() {
 /* ---------- Weekly update and Try it ---------- */
 const buildState = (b) => (b.status === 'ready' ? { text: 'Ready to try', cls: 'good' } : b.status === 'done' ? { text: 'Tried', cls: '' } : { text: `Coming ${fmtW(b.date)}`, cls: '' });
 function nextBuild() { const bs = B.builds || []; return bs.filter((b) => b.status === 'ready').pop() || bs.find((b) => b.status !== 'done' && b.status !== 'ready') || null; }
+// Monday: this week's plan (live from the task list). Friday: the week review (written, in B.weekly).
+function weekOf(d = today) { const wd = (D(d).getUTCDay() + 6) % 7, mon = addDays(d, -wd); return { mon, fri: addDays(mon, 4), sun: addDays(mon, 6) }; }
+function weekTasks(W = weekOf()) {
+  const order = { done: 3, late: 0, wait: 1, doing: 1, todo: 2 };
+  return C.tasks.filter((t) => (t.status === 'done' ? t.doneOn && t.doneOn >= W.mon && t.doneOn <= W.sun : t.start <= W.sun && t.due >= W.mon) || (t.status !== 'done' && t.due < W.mon))
+    .sort((a, b) => order[state(a).k] - order[state(b).k] || a.due.localeCompare(b.due));
+}
+const weekLabel = (W) => `${fmt(W.mon)} – ${fmt(W.fri)}`;
+const reviewFor = (W) => (B.weekly || []).find((w) => w.date >= W.mon && w.date <= W.sun);
 function weeklyBox() {
-  const W = (B.weekly || [])[0], nb = nextBuild();
-  const foot = nb ? `<div class="wk-foot"><span>${nb.status === 'ready' ? `<b>Ready to try:</b> ${esc(nb.title)}` : `<b>Next to try:</b> ${esc(nb.title)}, ${fmtW(nb.date)}`}</span><button class="btn ghost" data-build="${nb.id}">${nb.status === 'ready' ? 'Try it now' : 'See what it is'}</button></div>` : '';
-  const list = (a, n = 3) => `<ul>${a.slice(0, n).map((x) => `<li>${esc(x.t || x)}</li>`).join('')}${a.length > n ? `<li>and ${a.length - n} more</li>` : ''}</ul>`;
-  const body = W ? `<div class="wk-grid">
-      <div class="wk-col"><h4>Done</h4>${W.done && W.done.length ? list(W.done) : '<span class="ok">Nothing finished this week</span>'}</div>
-      <div class="wk-col"><h4>Next</h4>${W.next && W.next.length ? list(W.next) : '<span class="ok">To be confirmed</span>'}</div>
-      <div class="wk-col prob"><h4>Problems</h4>${W.problems && W.problems.length ? list(W.problems) : '<span class="ok">None this week</span>'}</div></div>
-    <div class="wk-foot"><span>Update for the week to ${fmtW(W.date)}</span><button class="btn ghost" data-week="${W.id}">Read the full update</button></div>`
-    : `<div class="wk-empty">${svg('week', 'ic')}<span>Every Friday you'll get a short update here and on WhatsApp: <b>what's done, what's next and any problems</b>. The first one arrives on ${fmtW(B.weeklyFrom || today)}.</span></div>`;
-  return `<div class="sec-h"><h2>This week</h2>${(B.weekly || []).length > 1 ? '<button data-view="weekly">All weekly updates</button>' : ''}</div><div class="box">${body}${foot}</div>`;
+  const W = weekOf(), ts = weekTasks(W), dn = ts.filter((t) => t.status === 'done').length, nb = nextBuild();
+  const rv = reviewFor(W), last = !rv && (B.weekly || [])[0];
+  const rows = ts.length ? ts.slice(0, 6).map(taskRow).join('') + (ts.length > 6 ? `<button class="more" data-view="weekly">See all ${ts.length} tasks this week</button>` : '') : '<div class="wk-empty"><span>Nothing scheduled this week.</span></div>';
+  const review = rv ? `<div class="wk-foot"><span><b>Friday review:</b> ${(rv.done || []).length} done${(rv.backlog || []).length ? `, ${rv.backlog.length} carried over` : ''}${(rv.problems || []).length ? `, ${rv.problems.length} to solve` : ''}</span><button class="btn ghost" data-week="${rv.id}">Read the review</button></div>`
+    : `<div class="wk-foot"><span><b>Friday ${fmt(W.fri)}:</b> the week review — what's done, what's carried over, and next week's plan.${last ? '' : ''}</span>${last ? `<button class="btn ghost" data-week="${last.id}">Last week's review</button>` : ''}</div>`;
+  const tryF = nb ? `<div class="wk-foot"><span>${nb.status === 'ready' ? `<b>Ready to try:</b> ${esc(nb.title)}` : `<b>Next to try:</b> ${esc(nb.title)}, ${fmtW(nb.date)}`}</span><button class="btn ghost" data-build="${nb.id}">${nb.status === 'ready' ? 'Try it now' : 'See what it is'}</button></div>` : '';
+  return `<div class="sec-h"><h2>This week · ${weekLabel(W)}</h2><button data-view="weekly">${dn} of ${ts.length} done</button></div><div class="box">${rows}${review}${tryF}</div>`;
 }
 function vWeekly() {
-  const ws = B.weekly || [];
-  return `<div class="p-eye">${svg('week', 'ic')}Weekly update</div><h3>Every Friday: done, next, problems</h3>
-    <p class="p-empty" style="color:var(--ink2)">A short, honest update every week. If something has gone wrong or slipped, you'll read it here first, with options, so we can sort it out together. Reply on any week.</p>
-    ${ws.length ? `<div class="p-list">${ws.map((w) => `<button class="row" data-week="${w.id}"><span class="kind">${svg('week')}</span><span class="row-t">Week to ${fmtW(w.date)}<small>${(w.done || []).length} done · ${(w.problems || []).length ? `${w.problems.length} to solve` : 'no problems'}</small></span>${ccHtml(countFor([`week:${w.id}`]))}${svg('chev', 'chev')}</button>`).join('')}</div>` : `<p class="p-empty">The first update arrives on ${fmtW(B.weeklyFrom || today)}.</p>`}`;
+  const W = weekOf(), ts = weekTasks(W), ws = B.weekly || [];
+  const grp = (label, list) => (list.length ? `<div class="blk"><h4>${label} · ${list.length}</h4><div class="p-list">${list.map(taskRow).join('')}</div></div>` : '');
+  const by = (k) => ts.filter((t) => (k === 'done' ? t.status === 'done' : k === 'you' ? t.status !== 'done' && TEAM.includes(t.owner) : t.status !== 'done' && !TEAM.includes(t.owner)));
+  return `<div class="p-eye">${svg('week', 'ic')}This week · ${weekLabel(W)}</div><h3>This week's plan</h3>
+    <p class="p-empty" style="color:var(--ink2)">Every Monday you'll see everything planned for the week here, and each task's status updates as it happens. Every Friday there's a short review: what's done, what's carried over and why, and the plan for next week.</p>
+    ${grp('To do this week', by('me'))}${grp('Needed from your side', by('you'))}${grp('Done this week', by('done'))}
+    <div class="blk"><h4>Friday reviews</h4>${ws.length ? `<div class="p-list">${ws.map((w) => `<button class="row" data-week="${w.id}"><span class="kind">${svg('week')}</span><span class="row-t">Week review · ${fmtW(w.date)}<small>${(w.done || []).length} done · ${(w.backlog || []).length} carried over · ${(w.problems || []).length ? `${w.problems.length} to solve` : 'no problems'}</small></span>${ccHtml(countFor([`week:${w.id}`]))}${svg('chev', 'chev')}</button>`).join('')}</div>` : `<p class="p-empty">The first review arrives on ${fmtW(B.weeklyFrom || weekOf().fri)}.</p>`}</div>`;
 }
 function vWeek(w) {
-  let h = `<div class="p-eye">${svg('week', 'ic')}Weekly update</div><h3>Week to ${fmtW(w.date)}</h3>`;
+  let h = `<div class="p-eye">${svg('week', 'ic')}Week review · ${fmtW(w.date)}</div><h3>The week in review</h3>`;
   if (w.summary) h += `<p style="font-size:15px;line-height:1.55">${esc(w.summary)}</p>`;
-  h += `<div class="blk"><h4>Done</h4>${(w.done || []).length ? ul(w.done.map((x) => x.t || x)) : '<p class="p-empty">Nothing finished this week.</p>'}</div>`;
-  h += `<div class="blk"><h4>Next</h4>${(w.next || []).length ? ul(w.next.map((x) => x.t || x)) : '<p class="p-empty">To be confirmed.</p>'}</div>`;
+  h += `<div class="blk"><h4>Done this week</h4>${(w.done || []).length ? ul(w.done.map((x) => x.t || x)) : '<p class="p-empty">Nothing finished this week.</p>'}</div>`;
+  h += `<div class="blk"><h4>Carried over</h4>${(w.backlog || []).length ? w.backlog.map((b) => `<div class="prob-n"><h4>${esc(b.t || b)}</h4>${b.why ? `<p>${esc(b.why)}</p>` : ''}${b.to ? `<p style="margin-top:6px"><b>New date:</b> ${esc(fmtW(b.to))}</p>` : ''}</div>`).join('') : '<div class="note info"><p>Nothing carried over. Everything planned is done.</p></div>'}</div>`;
   h += `<div class="blk"><h4>Problems</h4>${(w.problems || []).length ? w.problems.map((p) => `<div class="prob-n"><h4>${esc(p.t || p)}</h4>${p.d ? `<p>${esc(p.d)}</p>` : ''}${p.need ? `<p style="margin-top:6px"><b>What I need from you:</b> ${esc(p.need)}</p>` : ''}</div>`).join('') : '<div class="note info"><p>No problems this week.</p></div>'}</div>`;
+  h += `<div class="blk"><h4>Next week</h4>${(w.next || []).length ? ul(w.next.map((x) => x.t || x)) : '<p class="p-empty">The plan appears here on Monday.</p>'}</div>`;
   if (w.build) { const b = (B.builds || []).find((x) => x.id === w.build); if (b) h += `<div class="action-b" style="margin-bottom:18px"><button class="btn ghost" data-build="${b.id}">${b.status === 'ready' ? 'Try this week\'s version' : 'See what\'s next to try'}</button></div>`; }
   return h + commentsHtml(`week:${w.id}`, false, 'Questions or thoughts on this week');
 }
