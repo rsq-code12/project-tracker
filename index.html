@@ -72,6 +72,17 @@
   .sec-h button:hover { color: var(--ink); }
   .box { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
   .box.need { border-color: color-mix(in srgb, var(--warn) 28%, var(--line)); }
+  .wk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+  .wk-col { padding: 16px 18px; border-right: 1px solid var(--line); min-width: 0; } .wk-col:last-child { border-right: 0; }
+  .wk-col h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .wk-col ul { margin: 0; padding-left: 16px; font-size: 14px; line-height: 1.45; } .wk-col li + li { margin-top: 4px; }
+  .wk-col.prob h4 { color: var(--warn); } .wk-col .ok { font-size: 14px; color: var(--good); }
+  .wk-foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink2); }
+  .wk-foot b { color: var(--ink); } .wk-foot .btn { height: 34px; font-size: 13px; padding: 0 14px; }
+  .wk-empty { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; font-size: 14.5px; line-height: 1.5; color: var(--ink2); } .wk-empty .ic { flex: none; width: 20px; height: 20px; color: var(--accent); margin-top: 2px; }
+  .prob-n { border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); } .prob-n h4 { margin: 0 0 4px; color: var(--warn); } .prob-n p { margin: 0; }
+  .try-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 18px; }
+  @media (max-width: 640px) { .wk-grid { grid-template-columns: 1fr; } .wk-col { border-right: 0; border-bottom: 1px solid var(--line); } .wk-col:last-child { border-bottom: 0; } }
   .need-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px 6px; font-weight: 600; font-size: 14.5px; }
   .more { display: block; width: 100%; padding: 12px 16px 14px; font-size: 13.5px; color: var(--muted); font-weight: 500; border-top: 1px solid var(--line2); }
   .more:hover { color: var(--ink); background: var(--hover); }
@@ -354,12 +365,14 @@ const P = {
   doc: '<path d="M5.5 2.8h6l3.5 3.5v10.4a.8.8 0 0 1-.8.8H5.5a.8.8 0 0 1-.8-.8V3.6a.8.8 0 0 1 .8-.8z M11.3 2.8v3.7H15 M7.5 10.5h5M7.5 13.5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>',
   chat: '<path d="M4 5.6A1.6 1.6 0 0 1 5.6 4h8.8A1.6 1.6 0 0 1 16 5.6v5.8a1.6 1.6 0 0 1-1.6 1.6H9.2L6 16v-3H5.6A1.6 1.6 0 0 1 4 11.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
   image: '<rect x="3" y="4" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="7.5" cy="8.3" r="1.4" fill="currentColor"/><path d="M3.5 14.5l4.2-4 3 2.8 2.3-2 3.5 3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  week: '<rect x="3" y="4.5" width="14" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.5h14M7 3v3M13 3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  phone: '<rect x="6" y="2.5" width="8" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 14.5h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   mic: '<rect x="7.3" y="2.8" width="5.4" height="9" rx="2.7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 9.6a5.4 5.4 0 0 0 10.8 0M10 15v2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
 };
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '62d94a60f12c'; // set when the tracker is published
+const PAGE_VERSION = '1edb1c32c5f0'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -906,6 +919,8 @@ function page(c) {
     <nav class="quick" aria-label="Sections">
       <button class="qb" data-view="needs">${svg('list')}Needed from you${c.needNow.length ? ` <span class="count">${c.needNow.length}</span>` : ''}</button>
       ${(B.questions || []).length ? `<button class="qb" data-view="questions">${svg('chat')}Questions${c.qOpen.length ? ` <span class="count">${c.qOpen.length}</span>` : ' ✓'}</button>` : ''}
+      <button class="qb" data-view="weekly">${svg('week')}Weekly update</button>
+      <button class="qb" data-view="try">${svg('phone')}Try it</button>
       <button class="qb" data-view="updates">${svg('clock')}Updates</button>
       <button class="qb" data-view="docs">${svg('doc')}Documents</button>
       <button class="qb" data-view="about">${svg('info')}How we work</button>
@@ -918,6 +933,7 @@ function page(c) {
       <div class="prog"><span class="bar"><i style="width:${c.pct}%"></i></span><div class="prog-l"><span><b>${c.done.length}</b> of ${c.tasks.length} tasks done</span><span>${c.pct}%</span></div></div>
     </section>
     ${needHtml}
+    ${weeklyBox()}
     <div class="sec-h"><h2>Progress by phase</h2><span>Tap a phase to see its tasks</span></div>
     <div class="pcards">${cards}</div>
     <div class="sec-h"><h2>Latest updates</h2>${c.feed.length > 3 ? '<button data-view="updates">View all</button>' : ''}</div>
@@ -976,6 +992,53 @@ function vNeeds() {
     ${sec(`Waiting on you now · ${C.needNow.length}`, C.needNow, '', 'Nothing right now. Thank you!')}
     ${sec(`Coming up · ${C.needSoon.length}`, C.needSoon, 'soon', 'Nothing else planned yet.')}
     ${sec(`Received · ${C.needDone.length}`, C.needDone, 'done', 'Items you send will appear here.')}`;
+}
+/* ---------- Weekly update and Try it ---------- */
+const buildState = (b) => (b.status === 'ready' ? { text: 'Ready to try', cls: 'good' } : b.status === 'done' ? { text: 'Tried', cls: '' } : { text: `Coming ${fmtW(b.date)}`, cls: '' });
+function nextBuild() { const bs = B.builds || []; return bs.filter((b) => b.status === 'ready').pop() || bs.find((b) => b.status !== 'done' && b.status !== 'ready') || null; }
+function weeklyBox() {
+  const W = (B.weekly || [])[0], nb = nextBuild();
+  const foot = nb ? `<div class="wk-foot"><span>${nb.status === 'ready' ? `<b>Ready to try:</b> ${esc(nb.title)}` : `<b>Next to try:</b> ${esc(nb.title)}, ${fmtW(nb.date)}`}</span><button class="btn ghost" data-build="${nb.id}">${nb.status === 'ready' ? 'Try it now' : 'See what it is'}</button></div>` : '';
+  const list = (a, n = 3) => `<ul>${a.slice(0, n).map((x) => `<li>${esc(x.t || x)}</li>`).join('')}${a.length > n ? `<li>and ${a.length - n} more</li>` : ''}</ul>`;
+  const body = W ? `<div class="wk-grid">
+      <div class="wk-col"><h4>Done</h4>${W.done && W.done.length ? list(W.done) : '<span class="ok">Nothing finished this week</span>'}</div>
+      <div class="wk-col"><h4>Next</h4>${W.next && W.next.length ? list(W.next) : '<span class="ok">To be confirmed</span>'}</div>
+      <div class="wk-col prob"><h4>Problems</h4>${W.problems && W.problems.length ? list(W.problems) : '<span class="ok">None this week</span>'}</div></div>
+    <div class="wk-foot"><span>Update for the week to ${fmtW(W.date)}</span><button class="btn ghost" data-week="${W.id}">Read the full update</button></div>`
+    : `<div class="wk-empty">${svg('week', 'ic')}<span>Every Friday you'll get a short update here and on WhatsApp: <b>what's done, what's next and any problems</b>. The first one arrives on ${fmtW(B.weeklyFrom || today)}.</span></div>`;
+  return `<div class="sec-h"><h2>This week</h2>${(B.weekly || []).length > 1 ? '<button data-view="weekly">All weekly updates</button>' : ''}</div><div class="box">${body}${foot}</div>`;
+}
+function vWeekly() {
+  const ws = B.weekly || [];
+  return `<div class="p-eye">${svg('week', 'ic')}Weekly update</div><h3>Every Friday: done, next, problems</h3>
+    <p class="p-empty" style="color:var(--ink2)">A short, honest update every week. If something has gone wrong or slipped, you'll read it here first, with options, so we can sort it out together. Reply on any week.</p>
+    ${ws.length ? `<div class="p-list">${ws.map((w) => `<button class="row" data-week="${w.id}"><span class="kind">${svg('week')}</span><span class="row-t">Week to ${fmtW(w.date)}<small>${(w.done || []).length} done · ${(w.problems || []).length ? `${w.problems.length} to solve` : 'no problems'}</small></span>${ccHtml(countFor([`week:${w.id}`]))}${svg('chev', 'chev')}</button>`).join('')}</div>` : `<p class="p-empty">The first update arrives on ${fmtW(B.weeklyFrom || today)}.</p>`}`;
+}
+function vWeek(w) {
+  let h = `<div class="p-eye">${svg('week', 'ic')}Weekly update</div><h3>Week to ${fmtW(w.date)}</h3>`;
+  if (w.summary) h += `<p style="font-size:15px;line-height:1.55">${esc(w.summary)}</p>`;
+  h += `<div class="blk"><h4>Done</h4>${(w.done || []).length ? ul(w.done.map((x) => x.t || x)) : '<p class="p-empty">Nothing finished this week.</p>'}</div>`;
+  h += `<div class="blk"><h4>Next</h4>${(w.next || []).length ? ul(w.next.map((x) => x.t || x)) : '<p class="p-empty">To be confirmed.</p>'}</div>`;
+  h += `<div class="blk"><h4>Problems</h4>${(w.problems || []).length ? w.problems.map((p) => `<div class="prob-n"><h4>${esc(p.t || p)}</h4>${p.d ? `<p>${esc(p.d)}</p>` : ''}${p.need ? `<p style="margin-top:6px"><b>What I need from you:</b> ${esc(p.need)}</p>` : ''}</div>`).join('') : '<div class="note info"><p>No problems this week.</p></div>'}</div>`;
+  if (w.build) { const b = (B.builds || []).find((x) => x.id === w.build); if (b) h += `<div class="action-b" style="margin-bottom:18px"><button class="btn ghost" data-build="${b.id}">${b.status === 'ready' ? 'Try this week\'s version' : 'See what\'s next to try'}</button></div>`; }
+  return h + commentsHtml(`week:${w.id}`, false, 'Questions or thoughts on this week');
+}
+function vTry() {
+  const bs = B.builds || [];
+  return `<div class="p-eye">${svg('phone', 'ic')}Try it</div><h3>Something new to try every week or two</h3>
+    <p class="p-empty" style="color:var(--ink2)">So you can see the app coming together, not just read about it. Each version says what's new and what to try. Send feedback on each one: text, screenshots or a voice note.</p>
+    <div class="note info"><h4>How to install</h4><p><b>iPhone:</b> install TestFlight from the App Store, then open the invite link or email and tap Install. <b>Android:</b> open the testing link, tap "Become a tester", then install from Google Play. <b>Web pages:</b> just open the link.</p></div>
+    ${bs.length ? `<div class="p-list">${bs.map((b) => { const s = buildState(b); return `<button class="row" data-build="${b.id}"><span class="kind ${b.status === 'ready' ? 'done' : ''}">${svg('phone')}</span><span class="row-t">${esc(b.title)}<small>${fmtW(b.date)}<span class="m-when"> · ${esc(s.text)}</span></small></span><span class="when"><span class="tag ${s.cls}">${esc(s.text)}</span></span>${ccHtml(countFor([`build:${b.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>` : ''}`;
+}
+function vBuild(b) {
+  const s = buildState(b), L = b.links || {};
+  let h = `<div class="p-eye">${svg('phone', 'ic')}Try it · ${fmtW(b.date)}</div><h3>${esc(b.title)}</h3><p><span class="tag ${s.cls}">${esc(s.text)}</span></p>`;
+  const links = [L.ios && `<a class="btn" href="${esc(L.ios)}" target="_blank" rel="noopener noreferrer">Install on iPhone</a>`, L.android && `<a class="btn" href="${esc(L.android)}" target="_blank" rel="noopener noreferrer">Install on Android</a>`, L.web && `<a class="btn" href="${esc(L.web)}" target="_blank" rel="noopener noreferrer">Open it</a>`].filter(Boolean);
+  if (b.status === 'ready' && links.length) h += `<div class="try-links">${links.join('')}</div>`;
+  else if (b.status !== 'ready') h += `<p class="p-empty">The links appear here when it's ready. I'll also message you.</p>`;
+  if ((b.whatsNew || []).length) h += `<div class="blk"><h4>What's new</h4>${ul(b.whatsNew)}</div>`;
+  if ((b.tryThis || []).length) h += `<div class="blk"><h4>What to try</h4>${ul(b.tryThis)}</div>`;
+  return h + commentsHtml(`build:${b.id}`, false, 'Your feedback');
 }
 function vUpdates() {
   return `<div class="p-eye">${svg('clock', 'ic')}Updates</div><h3>Everything that has happened</h3>${C.feed.length ? `<div class="p-list">${C.feed.map(feedRow).join('')}</div>` : '<p class="p-empty">No updates yet.</p>'}`;
@@ -1038,9 +1101,11 @@ function drawPanel(keep) {
   if (cur.type === 'task') { const t = byId(cur.id); if (!t) return closePanel(); html = vTask(t); }
   else if (cur.type === 'access') { const a = accessById(cur.id); if (!a) return closePanel(); html = vAccess(a); }
   else if (cur.type === 'phase') { const p = B.phases.find((x) => x.id === cur.id); if (!p) return closePanel(); html = vPhase(p); }
+  else if (cur.type === 'week') { const w = (B.weekly || []).find((x) => x.id === cur.id); if (!w) return closePanel(); html = vWeek(w); }
+  else if (cur.type === 'build') { const b = (B.builds || []).find((x) => x.id === cur.id); if (!b) return closePanel(); html = vBuild(b); }
   else if (cur.type === 'question') { const q = qById(cur.id); if (!q) return closePanel(); html = vQuestion(q); }
   else if (cur.type === 'doc') { const d = docById(cur.id); if (!d) return closePanel(); html = vDoc(d); }
-  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, questions: vQuestions }[cur.type]();
+  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, questions: vQuestions, weekly: vWeekly, try: vTry }[cur.type]();
   const top = keep ? ($('.p-body', el) || {}).scrollTop || 0 : 0;
   el.innerHTML = `<div class="p-bar">${ui.stack.length > 1 ? `<button class="p-btn" data-back>${svg('back')}Back</button>` : '<span></span>'}<button class="p-btn" data-close aria-label="Close">${svg('x')}</button></div><div class="p-body">${html}</div>`;
   $('.p-body', el).scrollTop = top;
@@ -1086,7 +1151,9 @@ function openFromLink() {
   const o = new URLSearchParams(location.search).get('open') || new URLSearchParams(location.hash.slice(1)).get('open');
   if (!o) return;
   const [type, id] = o.split(':');
-  if (['needs', 'updates', 'docs', 'about', 'message', 'questions'].includes(type) && !id) return openPanel(type);
+  if (['needs', 'updates', 'docs', 'about', 'message', 'questions', 'weekly', 'try'].includes(type) && !id) return openPanel(type);
+  if (type === 'week' && (B.weekly || []).some((w) => w.id === id)) return openPanel('week', id);
+  if (type === 'build' && (B.builds || []).some((b) => b.id === id)) return openPanel('build', id);
   if (type === 'q' && id === 'all') return openAllAtOnce();
   if (type === 'q' && qById(id)) { openPanel('questions'); return openPanel('question', id, true); }
   if ((type === 'task' && byId(id)) || (type === 'doc' && docById(id)) || (type === 'access' && accessById(id))) return openPanel(type, id);
@@ -1187,6 +1254,8 @@ document.addEventListener('click', (e) => {
     return;
   }
   const qa = t.closest('[data-qall]'); if (qa) { e.preventDefault(); return openAllAtOnce(); }
+  const wk = t.closest('[data-week]'); if (wk) return openPanel('week', wk.dataset.week, inPanel);
+  const bd = t.closest('[data-build]'); if (bd) return openPanel('build', bd.dataset.build, inPanel);
   const qq = t.closest('[data-q]'); if (qq) return openPanel('question', qq.dataset.q, inPanel);
   const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
   const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);

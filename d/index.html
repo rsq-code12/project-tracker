@@ -464,6 +464,8 @@ function inboxTitle(key) {
   if (kind === 'task') { const t = task(id); return t ? `${id} · ${t.title}` : key; }
   if (kind === 'access') { const a = D.access.find((x) => x.id === id); return a ? `Access · ${a.item}` : key; }
   if (kind === 'phase') { const p = D.phases.find((x) => x.id === id); return p ? `Phase · ${p.name}` : key; }
+  if (kind === 'week') return `Weekly update · week to ${id}`;
+  if (kind === 'build') return `Try it · ${id}`;
   if (kind === 'q') { if (id === 'all') return 'Questions · answered all at once (and date changes)'; const q = (D.trackerQuestions || []).find((x) => x.id === id); return q ? `Question · ${q.q}` : key; }
   if (kind === 'doc') { const d = (D.trackerDocs || []).find((x) => x.id === id); return d ? `Document · ${d.title}` : key; }
   return key;
