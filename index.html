@@ -94,7 +94,7 @@
   .row-t { font-size: 14.5px; font-weight: 500; line-height: 1.35; min-width: 0; }
   .row-t small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
   .when { font-size: 13px; color: var(--muted); white-space: nowrap; text-align: right; }
-  .when.soon, .m-when.soon { color: var(--ink2); font-weight: 500; } .when.late, .m-when.late { color: var(--bad); font-weight: 500; } .when.done { color: var(--faint); }
+  .when.soon, .m-when.soon { color: var(--ink2); font-weight: 500; } .when.late, .m-when.late { color: var(--bad); font-weight: 500; } .when.done { color: var(--faint); } .when.sent, .m-when.sent { color: var(--accent); font-weight: 500; }
   .m-when { display: none; }
   .cc { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--accent); font-weight: 600; }
   .cc svg { width: 14px; height: 14px; }
@@ -102,7 +102,8 @@
   .ic { width: 18px; height: 18px; }
   .kind { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; background: var(--warnSoft); color: var(--warn); }
   .kind svg { width: 12px; height: 12px; }
-  .kind.soon, .kind.doc { background: var(--track); color: var(--ink2); } .kind.done { background: var(--goodSoft); color: var(--good); }
+  .kind.soon, .kind.doc { background: var(--track); color: var(--ink2); } .kind.done { background: var(--goodSoft); color: var(--good); } .kind.sent { background: var(--accentSoft); color: var(--accent); }
+  .box.need.calm { border-color: var(--line); }
 
   /* Phase cards */
   .pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
@@ -147,6 +148,7 @@
   .props div { display: grid; grid-template-columns: 104px 1fr; gap: 12px; padding: 9px 0; font-size: 14px; align-items: center; }
   .props dt { color: var(--muted); }
   .props dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .props dd .st { flex: 1 1 0; min-width: 0; }
   .props .bar { flex: 1; min-width: 80px; max-width: 160px; height: 6px; }
   .props .bar i { background: var(--accent); }
   .blk { margin-bottom: 22px; }
@@ -372,7 +374,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '78d2de2b9987'; // set when the tracker is published
+const PAGE_VERSION = '394df3fe313a'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -583,7 +585,7 @@ async function sendMsg(key, kind) {
   } catch (e) { toast(e.message); }
   FB.sending = null;
   paintThreads(); paintComposer(key); paintPage();
-  if (/^q:/.test(key) && ui.stack.length) drawPanel(true);
+  if (ui.stack.length) drawPanel(true); // the item's status changes to "Sent" straight away
 }
 
 /* ---------- Sign the scope, then pay ---------- */
@@ -783,10 +785,27 @@ const byDue = (a, b) => a.due.localeCompare(b.due);
 const byBy = (a, b) => (a.by || '9999').localeCompare(b.by || '9999');
 const needsOk = (t) => t.status !== 'done' && (t.info.need || []).some((n) => /approv|\bOK\b|\bgo\b|decision|agree/i.test(n));
 const accessOk = (a) => !['received', 'not needed'].includes(a.status) && /\bOK\b|agree|approved/i.test(`${a.how} ${(a.howTo || []).join(' ')}`);
+// "Sent": the newest message on an item is the client's and we haven't replied yet, so it's with us to check.
+// An access item and the client-side tasks it covers count as one conversation, whichever of them the message is on.
+// It stays "Sent" until we reply (back to "Waiting on you") or mark it received or done.
+const localDay = (iso) => { const d = new Date(iso); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+function sentDay(kind, id) {
+  if (!FB.on) return null;
+  const keys = [`${kind}:${id}`];
+  if (kind === 'access') { const a = accessById(id); if (a) keys.push(...a.tasks.filter((x) => byId(x) && TEAM.includes(byId(x).owner)).map((x) => `task:${x}`)); }
+  else if (kind === 'task') keys.push(...B.access.filter((a) => a.tasks.includes(id)).map((a) => `access:${a.id}`));
+  else return null;
+  const last = [...FB.msgs.values()].filter((m) => m && keys.includes(m.item) && m.kind !== 'due').sort((a, b) => String(a.at).localeCompare(String(b.at))).pop();
+  return last && last.role === 'client' && last.at ? localDay(last.at) : null;
+}
+const sentText = (day) => `Sent ${day === today ? 'today' : fmt(day)}`;
+const sentNote = () => `<div class="note info"><h4>Thank you</h4><p>${esc(lead())} is checking what you sent. You'll see it marked as received, or a reply below if anything else is needed.</p></div>`;
 
 function state(t) {
   if (t.status === 'done') return { k: 'done', label: 'Done' };
   const team = TEAM.includes(t.owner);
+  const sent = t.status !== 'skipped' && (team || t.status === 'waiting') ? sentDay('task', t.id) : null;
+  if (sent) return { k: 'sent', label: `${sentText(sent)} · ${lead()} is checking`, sent };
   if (t.due < today) return { k: 'late', label: team ? 'Needed now' : 'Running late' };
   if (t.status === 'waiting') return { k: 'wait', label: 'Waiting' };
   if (team && t.start <= today) return { k: 'wait', label: t.owner === 'client' ? 'With your team' : `With ${who(t.owner)}` };
@@ -812,11 +831,12 @@ function byWhen(by) {
   return { text: `By ${d < 7 ? dayName(by) : fmt(by)}`, cls: '' };
 }
 function icon(k, cls = 'ic') {
-  const c = { done: 'var(--good)', doing: 'var(--accent)', wait: 'var(--warn)', late: 'var(--bad)', todo: 'var(--faint)' }[k];
+  const c = { done: 'var(--good)', doing: 'var(--accent)', sent: 'var(--accent)', wait: 'var(--warn)', late: 'var(--bad)', todo: 'var(--faint)' }[k];
   const ring = `<circle cx="10" cy="10" r="8" fill="none" stroke="${c}" stroke-width="1.8"/>`;
   const body = {
     done: `<circle cx="10" cy="10" r="9" fill="${c}"/><path d="M6 10.4l2.6 2.6L14 7.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
     doing: `${ring}<path d="M10 4.8a5.2 5.2 0 0 1 0 10.4z" fill="${c}"/>`,
+    sent: `${ring}<path d="M6.7 10.3l2.3 2.3 4.4-4.7" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
     wait: `${ring}<path d="M10 6.2v4l2.5 1.6" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/>`,
     late: `${ring}<path d="M10 6v4.6" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="13.6" r="1.1" fill="${c}"/>`,
     todo: `<circle cx="10" cy="10" r="8" fill="none" stroke="${c}" stroke-width="1.8" stroke-dasharray="2.4 2.5"/>`,
@@ -841,20 +861,25 @@ function compute() {
   const team = tasks.filter((t) => TEAM.includes(t.owner) && !linked.has(t.id));
   const inputs = open.filter((t) => t.owner === 'lead' && t.info.need.length && !linked.has(t.id));
   const fromTeam = (t) => (t.owner === 'client' ? 'From your team' : `From ${who(t.owner)}`);
-  const needNow = [
+  const withSent = (n) => ({ ...n, sent: sentDay(n.kind, n.id) });
+  const nowAll = [
     ...B.access.filter((a) => ['asked', 'waiting'].includes(a.status)).map(aItem),
     ...team.filter((t) => t.status !== 'done' && (t.start <= addDays(today, 3) || t.status === 'waiting')).map((t) => tItem(t, fromTeam(t), 'user')),
     ...inputs.filter((t) => t.status === 'waiting').map((t) => tItem(t, 'Your input', 'pen')),
-  ].sort(byBy);
+  ].map(withSent).sort(byBy);
+  const needNow = nowAll.filter((n) => !n.sent);
   const qOpen = (B.questions || []).filter((q) => !answered(q.id));
   if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: `Your input · ${qOpen.length} to answer`, by: qDue() });
-  const seen = new Set(needNow.map((n) => n.kind + n.id));
+  const seen = new Set(nowAll.map((n) => n.kind + n.id));
   const horizon = addDays(today, 21);
-  const needSoon = [
+  const soonAll = [
     ...B.access.filter((a) => a.status === 'todo' && (!a.by || a.by <= horizon)).map(aItem),
     ...team.filter((t) => t.status !== 'done' && !seen.has('task' + t.id) && t.start <= horizon).map((t) => tItem(t, fromTeam(t), 'user')),
     ...inputs.filter((t) => !seen.has('task' + t.id) && t.start <= horizon).map((t) => tItem(t, 'Your input', 'pen')),
-  ].sort(byBy);
+  ].map(withSent).sort(byBy);
+  const needSoon = soonAll.filter((n) => !n.sent);
+  // Sent by the client and not yet replied to: with us to check, so not "waiting on you".
+  const needSent = [...nowAll, ...soonAll].filter((n) => n.sent).sort((a, b) => b.sent.localeCompare(a.sent) || byBy(a, b));
   const needDone = [
     ...B.access.filter((a) => ['received', 'not needed'].includes(a.status)).map(aItem),
     ...team.filter((t) => t.status === 'done').map((t) => tItem(t, 'From your team', 'user')),
@@ -869,18 +894,18 @@ function compute() {
     ...tasks.filter((t) => t.startedOn && t.status !== 'done').map((t) => ({ date: t.startedOn, kind: 'start', id: t.id, text: t.title })),
   ].sort((a, b) => b.date.localeCompare(a.date) || (a.kind === 'update' ? -1 : 1));
   const nextMs = (B.milestones || []).map(byId).filter(Boolean).find((t) => t.status !== 'done');
-  return { qOpen, M, tasks, done, open, pct, needNow, needSoon, needDone, health, launched, feed, nextMs };
+  return { qOpen, M, tasks, done, open, pct, needNow, needSoon, needSent, needDone, health, launched, feed, nextMs };
 }
 
 /* ---------- Pieces ---------- */
 function taskRow(t) {
-  const w = when(t);
-  return `<button class="row" data-task="${t.id}">${icon(state(t).k)}<span class="row-t">${esc(t.title)}<small class="m-when ${w.cls}">${w.text}</small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`task:${t.id}`]))}${svg('chev', 'chev')}</button>`;
+  const s = state(t), w = s.sent ? { text: sentText(s.sent), cls: 'sent' } : when(t);
+  return `<button class="row" data-task="${t.id}">${icon(s.k)}<span class="row-t">${esc(t.title)}<small class="m-when ${w.cls}">${w.text}</small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`task:${t.id}`]))}${svg('chev', 'chev')}</button>`;
 }
 function needRow(n, tone = '') {
-  const w = tone === 'done' ? { text: 'Received', cls: 'done' } : byWhen(n.by);
+  const w = tone === 'done' ? { text: 'Received', cls: 'done' } : tone === 'sent' ? { text: sentText(n.sent), cls: 'sent' } : byWhen(n.by);
   const attr = n.kind === 'access' ? `data-access="${n.id}"` : n.kind === 'view' ? `data-view="${n.id}"` : `data-task="${n.id}"`;
-  return `<button class="row" ${attr}><span class="kind ${tone}">${svg(tone === 'done' ? 'check' : n.icon)}</span><span class="row-t">${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
+  return `<button class="row" ${attr}><span class="kind ${tone}">${svg(tone === 'done' || tone === 'sent' ? 'check' : n.icon)}</span><span class="row-t">${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
 }
 function feedRow(f) {
   const label = f.kind === 'done' ? '<em class="done">Done</em> ' : f.kind === 'start' ? '<em>Started</em> ' : '';
@@ -901,9 +926,12 @@ function docTone(d) { const s = docStatusText(d) || ''; return /waiting/i.test(s
 function page(c) {
   const M = c.M, d = diff(today, M.launch);
   const line = c.launched ? `Launched ${fmtL(M.launch)}` : `${plural(d, 'day')} to go${c.nextMs ? ` · Next milestone: <b>${esc(c.nextMs.title)}</b>, ${fmtW(c.nextMs.due)}` : ''}`;
-  const needHtml = c.needNow.length ? `
-    <div class="box need"><div class="need-h">Waiting on you <span class="count">${c.needNow.length}</span></div>
+  const ns = c.needSent.length;
+  const sentLine = ns ? `<button class="row" data-view="needs"><span class="kind sent">${svg('check')}</span><span class="row-t">Sent by you<small>${esc(lead())} is checking<span class="m-when sent"> · ${plural(ns, 'item')}</span></small></span><span class="when sent">${plural(ns, 'item')}</span>${svg('chev', 'chev')}</button>` : '';
+  const needHtml = c.needNow.length || ns ? `
+    <div class="box need ${c.needNow.length ? '' : 'calm'}"><div class="need-h">${c.needNow.length ? `Waiting on you <span class="count">${c.needNow.length}</span>` : 'Nothing waiting on you right now'}</div>
       ${c.needNow.slice(0, 3).map((n) => needRow(n)).join('')}
+      ${sentLine}
       <button class="more" data-view="needs">See everything we need from you</button></div>` : '';
   const cards = B.phases.map((p, i) => {
     const x = phaseInfo(p, c);
@@ -950,10 +978,11 @@ function vTask(t) {
   const acc = B.access.filter((a) => a.tasks.includes(t.id));
   const after = t.depends.map(byId).filter(Boolean);
   const next = B.tasks.filter((x) => x.depends.includes(t.id));
-  const props = [['Status', `${icon(s.k)}${esc(s.label)}`], ['Owner', esc(who(t.owner))], ['Dates', `${t.start === t.due ? fmtW(t.due) : `${fmt(t.start)} → ${fmt(t.due)}`} <span style="color:var(--muted)">· ${w.text}</span>`]];
+  const props = [['Status', `${icon(s.k)}<span class="st">${esc(s.label)}</span>`], ['Owner', esc(who(t.owner))], ['Dates', `${t.start === t.due ? fmtW(t.due) : `${fmt(t.start)} → ${fmt(t.due)}`} <span style="color:var(--muted)">· ${w.text}</span>`]];
   if (t.progress && t.status !== 'done') props.push(['Progress', `<span class="bar"><i style="width:${(t.progress[0] / t.progress[1]) * 100}%"></i></span><span>${t.progress[0]} of ${t.progress[1]} steps</span>`]);
   if (t.status === 'done' && t.doneOn) props.push(['Completed', fmtL(t.doneOn)]);
   let h = `<div class="p-eye"><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</div><h3>${esc(t.title)}</h3><dl class="props">${props.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+  if (s.sent) h += sentNote();
   if (I.what) h += `<div class="blk"><h4>What this is</h4><p>${esc(I.what)}</p></div>`;
   if (I.why) h += `<div class="blk"><h4>Why it matters</h4><p>${esc(I.why)}</p></div>`;
   if (I.need.length && t.status !== 'done') h += `<div class="note warn"><h4>What we need from you</h4>${ul(I.need)}${acc.length ? `<div class="chips" style="margin-top:10px">${acc.map((a) => `<button class="chip" data-access="${a.id}">${svg('key', 'ic')}<span>${esc(a.item)}</span></button>`).join('')}</div>` : ''}</div>`;
@@ -966,9 +995,11 @@ function vTask(t) {
 function vAccess(a) {
   const ts = a.tasks.map(byId).filter(Boolean);
   const w = ['received', 'not needed'].includes(a.status) ? null : byWhen(a.by);
-  const st = a.status === 'received' ? icon('done') : ['asked', 'waiting'].includes(a.status) ? icon('wait') : icon('todo');
+  const sent = w ? sentDay('access', a.id) : null;
+  const st = a.status === 'received' ? icon('done') : sent ? icon('sent') : ['asked', 'waiting'].includes(a.status) ? icon('wait') : icon('todo');
   let h = `<div class="p-eye">${svg('key', 'ic')}Access we need</div><h3>${esc(a.item)}</h3>
-    <dl class="props"><div><dt>Status</dt><dd>${st}${esc(ACCESS[a.status] || 'Coming up')}</dd></div>${a.by ? `<div><dt>Needed by</dt><dd>${fmtW(a.by)}${w && w.cls === 'late' ? ' <span style="color:var(--bad)">· overdue</span>' : ''}</dd></div>` : ''}<div><dt>Who</dt><dd>${esc(a.from)}</dd></div></dl>`;
+    <dl class="props"><div><dt>Status</dt><dd>${st}<span class="st">${esc(sent ? `${sentText(sent)} · ${lead()} is checking` : ACCESS[a.status] || 'Coming up')}</span></dd></div>${a.by ? `<div><dt>Needed by</dt><dd>${fmtW(a.by)}${w && w.cls === 'late' && !sent ? ' <span style="color:var(--bad)">· overdue</span>' : ''}</dd></div>` : ''}<div><dt>Who</dt><dd>${esc(a.from)}</dd></div></dl>`;
+  if (sent) h += sentNote();
   if (a.sign) h += signCard(a.sign);
   if (a.why) h += `<div class="blk"><h4>Why I need it</h4><p>${esc(a.why)}</p></div>`;
   h += `<div class="blk"><h4>How to give it</h4>${a.howTo.length ? `<ol class="ol">${a.howTo.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : `<p>${esc(a.how)}</p>`}</div>`;
@@ -990,8 +1021,9 @@ function vNeeds() {
   return `<div class="p-eye">${svg('list', 'ic')}Needed from you</div><h3>Everything we need from you</h3>
     <p class="p-empty" style="color:var(--ink2)">Tap any item to see why it's needed and exactly how to give it. This covers the next three weeks.</p>
     ${sec(`Waiting on you now · ${C.needNow.length}`, C.needNow, '', 'Nothing right now. Thank you!')}
+    ${C.needSent.length ? `<p class="p-sub">Sent by you · ${C.needSent.length}</p><p class="p-empty" style="margin-bottom:6px">${esc(lead())} is checking these. If anything else is needed, you'll get a reply on the item and it moves back to your list.</p><div class="p-list">${C.needSent.map((n) => needRow(n, 'sent')).join('')}</div>` : ''}
     ${sec(`Coming up · ${C.needSoon.length}`, C.needSoon, 'soon', 'Nothing else planned yet.')}
-    ${sec(`Received · ${C.needDone.length}`, C.needDone, 'done', 'Items you send will appear here.')}`;
+    ${sec(`Received · ${C.needDone.length}`, C.needDone, 'done', `Items appear here once ${esc(lead())} has checked them.`)}`;
 }
 /* ---------- Weekly update and Try it ---------- */
 const buildState = (b) => (b.status === 'ready' ? { text: 'Ready to try', cls: 'good' } : b.status === 'done' ? { text: 'Tried', cls: '' } : { text: `Coming ${fmtW(b.date)}`, cls: '' });
@@ -999,7 +1031,7 @@ function nextBuild() { const bs = B.builds || []; return bs.filter((b) => b.stat
 // Monday: this week's plan (live from the task list). Friday: the week review (written, in B.weekly).
 function weekOf(d = today) { const wd = (D(d).getUTCDay() + 6) % 7, mon = addDays(d, -wd); return { mon, fri: addDays(mon, 4), sun: addDays(mon, 6) }; }
 function weekTasks(W = weekOf()) {
-  const order = { done: 3, late: 0, wait: 1, doing: 1, todo: 2 };
+  const order = { done: 3, late: 0, wait: 1, doing: 1, sent: 1, todo: 2 };
   return C.tasks.filter((t) => (t.status === 'done' ? t.doneOn && t.doneOn >= W.mon && t.doneOn <= W.sun : t.start <= W.sun && t.due >= W.mon) || (t.status !== 'done' && t.due < W.mon))
     .sort((a, b) => order[state(a).k] - order[state(b).k] || a.due.localeCompare(b.due));
 }
