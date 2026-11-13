@@ -14,6 +14,7 @@
     --bg:#FBFBFA; --surface:#FFFFFF; --hover:#F6F6F4; --ink:#0F1115; --ink2:#414854; --muted:#737B87; --faint:#A6ACB5;
     --line:#EBEBE8; --line2:#F2F2EF; --track:#EEEEEB;
     --accent:#2F5BEA; --accentSoft:#EEF2FE; --good:#12805C; --goodSoft:#E9F5EF; --warn:#B45309; --warnSoft:#FDF4E7; --bad:#C2410C; --badSoft:#FDEDE6;
+    --hot:#EA580C; --hot2:#DB2777; --hotSoft:#FFF1E7; --hotGlow:rgba(234,88,12,.07);
     --sans:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
       --bg:#0B0C0F; --surface:#121418; --hover:#181B20; --ink:#ECEEF2; --ink2:#C2C7D0; --muted:#8A919C; --faint:#5E6570;
       --line:#22252C; --line2:#1B1E24; --track:#22262D;
       --accent:#7D9BFF; --accentSoft:#1A2140; --good:#47C58F; --goodSoft:#10241B; --warn:#F2B25C; --warnSoft:#2A2012; --bad:#F38B69; --badSoft:#2C1812;
+      --hot:#FB8A4C; --hot2:#F472B6; --hotSoft:#2B1A10; --hotGlow:rgba(251,138,76,.08);
     }
   }
   * { box-sizing: border-box; }
@@ -326,6 +328,74 @@
     .rh { grid-template-columns: 1fr; gap: 0; }
     .cmp-b span { display: none; } .cmp-b.rec span, .cmp-b.ok.armed span, .cmp-b.keep span { display: inline; }
   }
+  /* Hot right now: the latest moves on the project, each card shown for 3 days, then gone */
+  @property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+  .hot-rail { display: none; }
+  .hot-h { display: flex; align-items: center; gap: 12px; }
+  .hot-h > div { min-width: 0; flex: 1; }
+  .hot-h b { display: block; font-size: 15.5px; font-weight: 650; letter-spacing: -.015em; }
+  .hot-h small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .hot-flame { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; color: #fff; background: linear-gradient(140deg, var(--hot), var(--hot2)); box-shadow: 0 8px 18px -8px var(--hot); }
+  .hot-flame svg { width: 19px; height: 19px; transform-origin: 50% 85%; animation: flicker 2.6s ease-in-out infinite; }
+  .hot-flame.calm { background: var(--track); color: var(--faint); box-shadow: none; } .hot-flame.calm svg { animation: none; }
+  .hot-n { flex: none; font-size: 12px; font-weight: 650; padding: 4px 10px; border-radius: 99px; background: var(--hotSoft); color: var(--hot); }
+  .hot-n.quiet { background: var(--track); color: var(--muted); }
+  .hot-list { display: grid; gap: 10px; margin-top: 18px; }
+  .hc { position: relative; display: grid; gap: 9px; width: 100%; padding: 14px 15px 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(15,17,21,.04); transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s; }
+  .hc:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -18px rgba(15,17,21,.35); border-color: var(--faint); }
+  .hc-top { display: flex; align-items: center; gap: 7px; font-size: 12px; min-width: 0; }
+  .hc-kind { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 6px; border-radius: 99px; font-weight: 600; background: var(--kSoft); color: var(--k); white-space: nowrap; }
+  .hc-kind svg { width: 13px; height: 13px; }
+  .hc-hot { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px 3px 6px; border-radius: 99px; font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: linear-gradient(110deg, var(--hot) 0%, var(--hot2) 45%, var(--hot) 90%); background-size: 220% 100%; animation: shimmer 3.2s linear infinite; }
+  .hc-hot svg { width: 11px; height: 11px; }
+  .hc time { margin-left: auto; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .hc-t { font-size: 14px; line-height: 1.5; color: var(--ink2); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .hc-t b { color: var(--ink); font-weight: 600; }
+  .hc-ul { display: grid; gap: 3px; font-size: 13.5px; color: var(--ink2); min-width: 0; }
+  .hc-ul > span { position: relative; padding-left: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hc-ul > span::before { content: ''; position: absolute; left: 1px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--k); }
+  .hc-foot { display: flex; align-items: center; gap: 10px; }
+  .hc-life { flex: 1; height: 3px; border-radius: 3px; background: var(--track); overflow: hidden; }
+  .hc-life i { display: block; height: 100%; border-radius: 3px; background: var(--k); opacity: .75; }
+  .hc-foot small { font-size: 11.5px; color: var(--faint); white-space: nowrap; }
+  .k-update { --k: var(--accent); --kSoft: var(--accentSoft); }
+  .k-done, .k-week { --k: var(--good); --kSoft: var(--goodSoft); }
+  .k-start { --k: var(--warn); --kSoft: var(--warnSoft); }
+  .k-doc { --k: var(--ink2); --kSoft: var(--track); }
+  .k-build { --k: var(--hot); --kSoft: var(--hotSoft); }
+  .hc.hottest { border: 1.5px solid transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, conic-gradient(from var(--ang), var(--hot), var(--hot2), var(--accent), var(--hot)) border-box; box-shadow: 0 16px 34px -22px var(--hot); animation: spin 7s linear infinite; }
+  .hc.hottest .hc-t { color: var(--ink); -webkit-line-clamp: 6; }
+  .hc-dot { display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); flex: none; animation: ping 2s ease-out infinite; transition: opacity .6s, transform .6s; }
+  .hc.unseen .hc-dot { display: block; } .hc.seen .hc-dot { opacity: 0; transform: scale(.4); }
+  .hc.unseen time { color: var(--ink2); }
+  .hc.enter { animation: hotIn .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 80ms); }
+  .hc.hottest.enter { animation: hotIn .6s cubic-bezier(.2,.8,.2,1) both, spin 7s linear infinite; animation-delay: calc(var(--i) * 80ms), 0s; }
+  .hc.fresh { animation: hotIn .6s cubic-bezier(.2,.8,.2,1) both, freshGlow 2.4s ease-out .3s 2; }
+  .hc.hottest.fresh { animation: hotIn .6s cubic-bezier(.2,.8,.2,1) both, freshGlow 2.4s ease-out .3s 2, spin 7s linear infinite; }
+  .hot-all { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 14px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--muted); border: 1px dashed var(--line); }
+  .hot-all:hover { color: var(--ink); border-color: var(--faint); }
+  .hot-all svg { width: 13px; height: 13px; }
+  .hot-empty { margin-top: 26px; padding: 26px 18px; border-radius: 16px; border: 1px dashed var(--line); text-align: center; display: grid; justify-items: center; gap: 8px; }
+  .hot-empty b { font-size: 14.5px; } .hot-empty p { margin: 0; font-size: 13px; color: var(--muted); max-width: 250px; }
+  .hot-note { margin-top: auto; padding-top: 22px; font-size: 11.5px; color: var(--faint); line-height: 1.6; }
+  .hot-strip { margin: 0 0 6px; }
+  .hot-row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 20px; margin: 14px -20px 0; padding: 4px 20px 10px; scrollbar-width: none; }
+  .hot-row::-webkit-scrollbar { display: none; }
+  .hot-row .hc { flex: 0 0 min(84%, 340px); scroll-snap-align: start; align-content: start; }
+  .hot-row .hc.hottest .hc-t { -webkit-line-clamp: 4; }
+  @keyframes hotIn { from { opacity: 0; transform: translateX(28px) scale(.97); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes spin { to { --ang: 360deg; } }
+  @keyframes shimmer { to { background-position: -220% 0; } }
+  @keyframes flicker { 0%, 100% { transform: rotate(-3deg) scale(1); } 50% { transform: rotate(3deg) scale(1.08); } }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(234,88,12,.5); } 100% { box-shadow: 0 0 0 7px rgba(234,88,12,0); } }
+  @keyframes freshGlow { 0% { box-shadow: 0 0 0 0 rgba(234,88,12,.35); } 100% { box-shadow: 0 0 0 14px rgba(234,88,12,0); } }
+  @media (max-width: 640px) { .hot-row { margin: 14px -16px 0; padding: 4px 16px 10px; scroll-padding-inline: 16px; } }
+  @media (min-width: 1180px) {
+    .shell { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 30vw, 460px); align-items: start; }
+    .hot-rail { display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; scrollbar-width: thin; padding: 24px 22px 22px; border-left: 1px solid var(--line); background: linear-gradient(180deg, var(--hotGlow), transparent 320px), var(--surface); }
+    .hot-strip { display: none; }
+  }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -370,11 +440,14 @@ const P = {
   week: '<rect x="3" y="4.5" width="14" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.5h14M7 3v3M13 3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   phone: '<rect x="6" y="2.5" width="8" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 14.5h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   mic: '<rect x="7.3" y="2.8" width="5.4" height="9" rx="2.7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 9.6a5.4 5.4 0 0 0 10.8 0M10 15v2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  flame: '<path d="M10.2 2.2c.5 2.6 2.4 3.9 3.7 5.6a5.9 5.9 0 0 1 1.3 3.8 5.2 5.2 0 0 1-10.4.2c0-2 .9-3.5 2.2-4.6.1 1.4.7 2.4 1.7 2.9-.4-2.8.4-5.6 1.5-7.9z" fill="currentColor"/><path d="M10 17.2a2.4 2.4 0 0 1-2.4-2.5c0-1.2.8-2 1.6-2.7.1.7.4 1.2 1 1.4.1-1 .5-1.8 1.1-2.4.6 1 1.1 2 1.1 3.3a2.4 2.4 0 0 1-2.4 2.9z" fill="#fff" opacity=".55"/>',
+  spark: '<path d="M10 2.8l1.6 4.2 4.2 1.6-4.2 1.6L10 14.4l-1.6-4.2-4.2-1.6 4.2-1.6zM15.2 13.2l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor"/>',
+  play: '<circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.4 7.2v5.6l4.4-2.8z" fill="currentColor"/>',
 };
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '394df3fe313a'; // set when the tracker is published
+const PAGE_VERSION = 'c37c75ce5296'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -922,6 +995,83 @@ function phaseInfo(p, c) {
 const docStatusText = (d) => (signedMsg(d.id) ? 'Signed' : d.status);
 function docTone(d) { const s = docStatusText(d) || ''; return /waiting/i.test(s) ? 'warn' : /signed|received|done/i.test(s) ? 'done' : /sent/i.test(s) ? 'now' : 'next'; }
 
+/* ---------- Hot right now: the latest moves, each card shown for 3 days, then gone ---------- */
+const HOT_DAYS = 3, HOT_MAX = 8;
+const HOT_SHOWN = new Set(); // cards already drawn on this visit, so a refresh doesn't replay their entrance
+let hotSeenT = null;
+const HOT_META = { update: ['Update', 'spark'], doc: ['New document', 'doc'], build: ['Ready to try', 'phone'], week: ['Week review', 'week'], done: ['Done', 'check'], start: ['Started', 'play'] };
+function hotSeen() { try { return new Set(JSON.parse(localStorage.getItem('tracker.hotSeen') || '[]')); } catch { return new Set(); } }
+function hotMarkSeen(keys) { try { const s = hotSeen(); keys.forEach((k) => s.add(k)); localStorage.setItem('tracker.hotSeen', JSON.stringify([...s].slice(-300))); } catch {} }
+const hkey = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
+function hotLife(x) {
+  // From its exact time if it has one, otherwise from the start of its day.
+  const [y, m, d] = x.date.split('-').map(Number);
+  const start = x.at ? Date.parse(x.at) : new Date(y, m - 1, d).getTime();
+  const end = x.at ? start + HOT_DAYS * 864e5 : new Date(y, m - 1, d + HOT_DAYS).getTime();
+  const left = end - Date.now();
+  return { left, end, pct: Math.max(4, Math.min(100, (left / (HOT_DAYS * 864e5)) * 100)) };
+}
+function fadeText(life) {
+  // Say the last day the card is shown; on its last day, the hours left.
+  const h = life.left / 36e5, last = new Date(life.end - 1), now = new Date();
+  if (last.toDateString() === now.toDateString() || h < 12) return h < 1 ? 'Fades soon' : `Fades in ${Math.ceil(h)} h`;
+  const tmr = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return last.toDateString() === tmr.toDateString() ? 'Here until tomorrow' : `Here until ${last.toLocaleDateString('en-GB', { weekday: 'long' })}`;
+}
+function hotWhen(x) {
+  if (x.at && x.date === today) return ago(x.at);
+  const a = diff(x.date, today);
+  return a <= 0 ? 'Today' : a === 1 ? 'Yesterday' : fmtW(x.date);
+}
+function hotItems(c) {
+  const live = (date) => date && date <= today && diff(date, today) <= HOT_DAYS;
+  const out = [];
+  for (const u of B.updates || []) if (live(u.date)) out.push({ kind: 'update', rank: 0, date: u.date, at: u.at, text: u.text, attr: 'data-view="updates"' });
+  for (const d of B.documents || []) if (live(d.date) && !/^due/i.test(d.status || '')) out.push({ kind: 'doc', rank: 1, date: d.date, title: d.title, text: d.summary || docStatusText(d), attr: `data-doc="${esc(d.id)}"` });
+  for (const b of B.builds || []) if (b.status === 'ready' && live(b.date)) out.push({ kind: 'build', rank: 1, date: b.date, title: b.title, text: (b.whatsNew || [])[0] || 'A new version is ready to try.', attr: `data-build="${esc(b.id)}"` });
+  for (const w of B.weekly || []) if (live(w.date)) out.push({ kind: 'week', rank: 1, date: w.date, title: 'Friday review', text: `${plural((w.done || []).length, 'task')} done${(w.backlog || []).length ? `, ${w.backlog.length} carried over` : ''}, and what's next.`, attr: `data-week="${esc(w.id)}"` });
+  // Tasks finished or started on the same day become one card, so the column stays calm.
+  const group = (list, kind, rank, verb) => {
+    const byDay = new Map();
+    for (const [date, t] of list) if (live(date)) byDay.set(date, [...(byDay.get(date) || []), t]);
+    for (const [date, ts] of byDay) out.push({ kind, rank, date, tasks: ts, title: ts.length > 1 ? `${ts.length} tasks ${verb}` : '', attr: ts.length === 1 ? `data-task="${esc(ts[0].id)}"` : 'data-view="updates"' });
+  };
+  group(c.done.filter((t) => t.doneOn).map((t) => [t.doneOn, t]), 'done', 2, 'done');
+  group(c.tasks.filter((t) => t.startedOn && t.status !== 'done').map((t) => [t.startedOn, t]), 'start', 3, 'started');
+  return out
+    .map((x) => ({ ...x, key: `${x.kind}:${x.date}:${hkey(x.text || x.title || '')}${x.tasks ? hkey(x.tasks.map((t) => t.id).join()) : ''}`, life: hotLife(x) }))
+    .filter((x) => x.life.left > 0)
+    .sort((a, b) => b.date.localeCompare(a.date) || a.rank - b.rank || String(b.at || '').localeCompare(String(a.at || '')));
+}
+function hotCard(x, i, seen, hottest) {
+  const [label, ic] = HOT_META[x.kind];
+  const motion = HOT_SHOWN.has(x.key) ? '' : HOT_SHOWN.size ? 'fresh' : 'enter';
+  const cls = ['hc', `k-${x.kind}`, hottest ? 'hottest' : '', seen.has(x.key) ? '' : 'unseen', motion].filter(Boolean).join(' ');
+  const body = x.tasks
+    ? x.tasks.length === 1 ? `<span class="hc-t"><b>${esc(x.tasks[0].title)}</b></span>`
+      : `<span class="hc-t"><b>${esc(x.title)}</b></span><span class="hc-ul">${x.tasks.slice(0, 3).map((t) => `<span>${esc(t.title)}</span>`).join('')}${x.tasks.length > 3 ? `<span>and ${x.tasks.length - 3} more</span>` : ''}</span>`
+    : `<span class="hc-t">${x.title ? `<b>${esc(x.title)}</b> · ` : ''}${esc(x.text)}</span>`;
+  return `<button class="${cls}" style="--i:${i}" ${x.attr} data-hot="${x.key}">
+    <span class="hc-top"><span class="hc-kind">${svg(ic)}${label}</span>${hottest ? `<span class="hc-hot">${svg('flame')}Hot</span>` : ''}<time>${hotWhen(x)}</time><i class="hc-dot" title="New since your last visit"></i></span>
+    ${body}
+    <span class="hc-foot"><span class="hc-life"><i style="width:${x.life.pct.toFixed(1)}%"></i></span><small>${fadeText(x.life)}</small></span></button>`;
+}
+function hotBlocks(c) {
+  const items = hotItems(c).slice(0, HOT_MAX), seen = hotSeen();
+  const fresh = items.filter((x) => !seen.has(x.key)).length;
+  const head = (sub) => `<div class="hot-h"><span class="hot-flame${items.length ? '' : ' calm'}">${svg('flame')}</span><div><b>Hot right now</b><small>${sub}</small></div>${items.length ? `<span class="hot-n${fresh ? '' : ' quiet'}">${fresh ? `${fresh} new` : plural(items.length, 'update')}</span>` : ''}</div>`;
+  const cards = (n) => items.slice(0, n).map((x, i) => hotCard(x, i, seen, i === 0)).join('');
+  const rail = `<aside class="hot-rail" aria-label="Hot right now">${head(`What's moving on ${esc(c.M.project)}`)}
+    ${items.length ? `<div class="hot-list">${cards(HOT_MAX)}</div><button class="hot-all" data-view="updates">See all updates${svg('chev')}</button>`
+      : `<div class="hot-empty"><b>All quiet right now</b><p>New updates from ${esc(lead())} appear here and stay for ${HOT_DAYS} days.</p></div>`}
+    <p class="hot-note">Each card stays for ${HOT_DAYS} days, then clears itself. The full history is always in Updates.</p></aside>`;
+  const strip = items.length ? `<section class="hot-strip" aria-label="Hot right now">${head(`Swipe for more · each fades in ${HOT_DAYS} days`)}<div class="hot-row">${cards(6)}</div></section>` : '';
+  items.forEach((x) => HOT_SHOWN.add(x.key));
+  // After a few seconds on the page, the "new" dots fade: next visit, only newer cards carry one.
+  if (fresh && !hotSeenT) hotSeenT = setTimeout(() => { hotSeenT = null; hotMarkSeen(items.map((x) => x.key)); document.querySelectorAll('.hc.unseen').forEach((el) => el.classList.add('seen')); }, 6000);
+  return { rail, strip };
+}
+
 /* ---------- Page ---------- */
 function page(c) {
   const M = c.M, d = diff(today, M.launch);
@@ -941,7 +1091,8 @@ function page(c) {
       <span class="pc-bot">${mring(x.ts.length ? x.dn / x.ts.length : 0, p.color)}<span><b>${x.dn}</b> of ${x.ts.length} done</span>${ccHtml(x.comments)}</span></button>`;
   }).join('');
   const general = countFor(['general']);
-  return `<div class="page">
+  const hot = hotBlocks(c);
+  return `<div class="shell"><div class="page">
     <div class="top"><div class="brand"><span class="mark">${esc((M.project || 'P')[0])}</span><span>${esc(M.project)}</span><span>Project tracker</span></div>
       <div class="live" id="live"><span class="pulse"></span><span id="ago"></span></div></div>
     <nav class="quick" aria-label="Sections">
@@ -960,6 +1111,7 @@ function page(c) {
       <p class="meta">${line}</p>
       <div class="prog"><span class="bar"><i style="width:${c.pct}%"></i></span><div class="prog-l"><span><b>${c.done.length}</b> of ${c.tasks.length} tasks done</span><span>${c.pct}%</span></div></div>
     </section>
+    ${hot.strip}
     ${needHtml}
     ${weeklyBox()}
     <div class="sec-h"><h2>Progress by phase</h2><span>Tap a phase to see its tasks</span></div>
@@ -967,7 +1119,7 @@ function page(c) {
     <div class="sec-h"><h2>Latest updates</h2>${c.feed.length > 3 ? '<button data-view="updates">View all</button>' : ''}</div>
     <div class="box">${c.feed.length ? c.feed.slice(0, 3).map(feedRow).join('') : '<div class="up"><time></time><span>No updates yet.</span></div>'}</div>
     <footer>Prepared by ${esc(M.preparedBy)}. This page updates by itself, so there's no need to refresh.<br>It's a private link for ${esc(M.project)}. Please don't forward it.</footer>
-  </div>`;
+  </div>${hot.rail}</div>`;
 }
 
 /* ---------- Panel views ---------- */
@@ -1260,6 +1412,7 @@ async function load(first) {
 /* ---------- Events ---------- */
 document.addEventListener('click', (e) => {
   const t = e.target;
+  const hk = t.closest('[data-hot]'); if (hk) { hotMarkSeen([hk.dataset.hot]); hk.classList.add('seen'); }
   const sds = t.closest('[data-sdsend]'); if (sds) return sendSignedDoc(sds.dataset.sdsend);
   if (t.closest('[data-sdcancel]')) { SIGNDOC = null; return drawPanel(true); }
   const sa = t.closest('[data-s]'); if (sa && SIGN.el && SIGN.el.contains(sa)) return signAction(sa.dataset.s);
