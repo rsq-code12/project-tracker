@@ -351,9 +351,12 @@
   .hc time { margin-left: auto; color: var(--muted); font-weight: 500; white-space: nowrap; }
   .hc-t { font-size: 14px; line-height: 1.5; color: var(--ink2); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .hc-t b { color: var(--ink); font-weight: 600; }
-  .hc-ul { display: grid; gap: 3px; font-size: 13.5px; color: var(--ink2); min-width: 0; }
-  .hc-ul > span { position: relative; padding-left: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hc-ul > span::before { content: ''; position: absolute; left: 1px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--k); }
+  .hc-sub { font-size: 12.5px; color: var(--muted); margin-top: -5px; }
+  .hc-link { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 10px; border-radius: 10px; background: var(--hover); font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .hc-link svg { width: 14px; height: 14px; color: var(--k); }
+  .hc-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hc-link svg:last-child { width: 12px; height: 12px; color: var(--faint); transition: transform .2s, color .2s; }
+  .hc:hover .hc-link svg:last-child { color: var(--ink); transform: translateX(2px); }
   .hc-foot { display: flex; align-items: center; gap: 10px; }
   .hc-life { flex: 1; height: 3px; border-radius: 3px; background: var(--track); overflow: hidden; }
   .hc-life i { display: block; height: 100%; border-radius: 3px; background: var(--k); opacity: .75; }
@@ -447,7 +450,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = 'c37c75ce5296'; // set when the tracker is published
+const PAGE_VERSION = 'e0cb3dcb3424'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -996,7 +999,7 @@ const docStatusText = (d) => (signedMsg(d.id) ? 'Signed' : d.status);
 function docTone(d) { const s = docStatusText(d) || ''; return /waiting/i.test(s) ? 'warn' : /signed|received|done/i.test(s) ? 'done' : /sent/i.test(s) ? 'now' : 'next'; }
 
 /* ---------- Hot right now: the latest moves, each card shown for 3 days, then gone ---------- */
-const HOT_DAYS = 3, HOT_MAX = 8;
+const HOT_DAYS = 3, HOT_MAX = 10;
 const HOT_SHOWN = new Set(); // cards already drawn on this visit, so a refresh doesn't replay their entrance
 let hotSeenT = null;
 const HOT_META = { update: ['Update', 'spark'], doc: ['New document', 'doc'], build: ['Ready to try', 'phone'], week: ['Week review', 'week'], done: ['Done', 'check'], start: ['Started', 'play'] };
@@ -1023,23 +1026,36 @@ function hotWhen(x) {
   const a = diff(x.date, today);
   return a <= 0 ? 'Today' : a === 1 ? 'Yesterday' : fmtW(x.date);
 }
+// Every card is a notification about one thing on this page, and tapping it opens that thing.
+const VIEW_TITLE = { questions: 'Questions', weekly: 'This week', try: 'Try it', needs: 'Needed from you', updates: 'Updates', docs: 'Documents', about: 'How we work' };
+const REF_ICON = { task: 'list', doc: 'doc', access: 'key', q: 'chat', week: 'week', build: 'phone', phase: 'list', view: 'info' };
+function hotRef(ref) {
+  const m = /^(task|doc|access|q|week|build|phase|view):([A-Za-z0-9_-]+)$/.exec(ref || '');
+  if (!m) return null;
+  const [, type, id] = m;
+  const title = type === 'task' ? byId(id)?.title : type === 'doc' ? docById(id)?.title : type === 'access' ? accessById(id)?.item
+    : type === 'q' ? qById(id)?.q : type === 'build' ? (B.builds || []).find((b) => b.id === id)?.title
+    : type === 'week' ? ((B.weekly || []).some((w) => w.id === id) ? 'Friday review' : '')
+    : type === 'phase' ? (B.phases || []).find((p) => p.id === id)?.name : VIEW_TITLE[id];
+  return title ? { type, id, title, attr: `data-${type}="${esc(id)}"` } : null;
+}
 function hotItems(c) {
   const live = (date) => date && date <= today && diff(date, today) <= HOT_DAYS;
-  const out = [];
-  for (const u of B.updates || []) if (live(u.date)) out.push({ kind: 'update', rank: 0, date: u.date, at: u.at, text: u.text, attr: 'data-view="updates"' });
-  for (const d of B.documents || []) if (live(d.date) && !/^due/i.test(d.status || '')) out.push({ kind: 'doc', rank: 1, date: d.date, title: d.title, text: d.summary || docStatusText(d), attr: `data-doc="${esc(d.id)}"` });
-  for (const b of B.builds || []) if (b.status === 'ready' && live(b.date)) out.push({ kind: 'build', rank: 1, date: b.date, title: b.title, text: (b.whatsNew || [])[0] || 'A new version is ready to try.', attr: `data-build="${esc(b.id)}"` });
-  for (const w of B.weekly || []) if (live(w.date)) out.push({ kind: 'week', rank: 1, date: w.date, title: 'Friday review', text: `${plural((w.done || []).length, 'task')} done${(w.backlog || []).length ? `, ${w.backlog.length} carried over` : ''}, and what's next.`, attr: `data-week="${esc(w.id)}"` });
-  // Tasks finished or started on the same day become one card, so the column stays calm.
-  const group = (list, kind, rank, verb) => {
-    const byDay = new Map();
-    for (const [date, t] of list) if (live(date)) byDay.set(date, [...(byDay.get(date) || []), t]);
-    for (const [date, ts] of byDay) out.push({ kind, rank, date, tasks: ts, title: ts.length > 1 ? `${ts.length} tasks ${verb}` : '', attr: ts.length === 1 ? `data-task="${esc(ts[0].id)}"` : 'data-view="updates"' });
-  };
-  group(c.done.filter((t) => t.doneOn).map((t) => [t.doneOn, t]), 'done', 2, 'done');
-  group(c.tasks.filter((t) => t.startedOn && t.status !== 'done').map((t) => [t.startedOn, t]), 'start', 3, 'started');
+  const out = [], told = new Set();
+  for (const u of B.updates || []) if (live(u.date)) {
+    const r = hotRef(u.ref);
+    if (r) told.add(`${r.type}:${r.id}`);
+    out.push({ kind: 'update', rank: 0, date: u.date, at: u.at, text: u.text, ref: r, attr: r ? r.attr : 'data-view="updates"' });
+  }
+  for (const d of B.documents || []) if (live(d.date) && !/^due/i.test(d.status || '') && !told.has(`doc:${d.id}`)) out.push({ kind: 'doc', rank: 1, date: d.date, id: d.id, title: d.title, text: d.summary || docStatusText(d), attr: `data-doc="${esc(d.id)}"` });
+  for (const b of B.builds || []) if (b.status === 'ready' && live(b.date) && !told.has(`build:${b.id}`)) out.push({ kind: 'build', rank: 1, date: b.date, id: b.id, title: b.title, text: (b.whatsNew || [])[0] || 'A new version is ready to try.', attr: `data-build="${esc(b.id)}"` });
+  for (const w of B.weekly || []) if (live(w.date) && !told.has(`week:${w.id}`)) out.push({ kind: 'week', rank: 1, date: w.date, id: w.id, title: 'Friday review', text: `${plural((w.done || []).length, 'task')} done${(w.backlog || []).length ? `, ${w.backlog.length} carried over` : ''}, and what's next.`, attr: `data-week="${esc(w.id)}"` });
+  // Each task finished or started gets its own card that opens it. Anything an update already covers gets no second card.
+  const phaseOf = (t) => (B.phases || []).find((p) => p.id === t.phase)?.name || '';
+  for (const t of c.done) if (live(t.doneOn) && !told.has(`task:${t.id}`)) out.push({ kind: 'done', rank: 2, date: t.doneOn, id: t.id, title: t.title, sub: phaseOf(t), attr: `data-task="${esc(t.id)}"` });
+  for (const t of c.tasks) if (t.status !== 'done' && live(t.startedOn) && !told.has(`task:${t.id}`)) out.push({ kind: 'start', rank: 3, date: t.startedOn, id: t.id, title: t.title, sub: phaseOf(t), attr: `data-task="${esc(t.id)}"` });
   return out
-    .map((x) => ({ ...x, key: `${x.kind}:${x.date}:${hkey(x.text || x.title || '')}${x.tasks ? hkey(x.tasks.map((t) => t.id).join()) : ''}`, life: hotLife(x) }))
+    .map((x) => ({ ...x, key: `${x.kind}:${x.date}:${x.id || hkey(x.text || '')}`, life: hotLife(x) }))
     .filter((x) => x.life.left > 0)
     .sort((a, b) => b.date.localeCompare(a.date) || a.rank - b.rank || String(b.at || '').localeCompare(String(a.at || '')));
 }
@@ -1047,13 +1063,13 @@ function hotCard(x, i, seen, hottest) {
   const [label, ic] = HOT_META[x.kind];
   const motion = HOT_SHOWN.has(x.key) ? '' : HOT_SHOWN.size ? 'fresh' : 'enter';
   const cls = ['hc', `k-${x.kind}`, hottest ? 'hottest' : '', seen.has(x.key) ? '' : 'unseen', motion].filter(Boolean).join(' ');
-  const body = x.tasks
-    ? x.tasks.length === 1 ? `<span class="hc-t"><b>${esc(x.tasks[0].title)}</b></span>`
-      : `<span class="hc-t"><b>${esc(x.title)}</b></span><span class="hc-ul">${x.tasks.slice(0, 3).map((t) => `<span>${esc(t.title)}</span>`).join('')}${x.tasks.length > 3 ? `<span>and ${x.tasks.length - 3} more</span>` : ''}</span>`
+  const body = x.kind === 'done' || x.kind === 'start'
+    ? `<span class="hc-t"><b>${esc(x.title)}</b></span>${x.sub ? `<span class="hc-sub">${esc(x.sub)}</span>` : ''}`
     : `<span class="hc-t">${x.title ? `<b>${esc(x.title)}</b> · ` : ''}${esc(x.text)}</span>`;
+  const link = x.ref ? `<span class="hc-link">${svg(REF_ICON[x.ref.type] || 'info')}<span>${esc(x.ref.title)}</span>${svg('chev')}</span>` : '';
   return `<button class="${cls}" style="--i:${i}" ${x.attr} data-hot="${x.key}">
     <span class="hc-top"><span class="hc-kind">${svg(ic)}${label}</span>${hottest ? `<span class="hc-hot">${svg('flame')}Hot</span>` : ''}<time>${hotWhen(x)}</time><i class="hc-dot" title="New since your last visit"></i></span>
-    ${body}
+    ${body}${link}
     <span class="hc-foot"><span class="hc-life"><i style="width:${x.life.pct.toFixed(1)}%"></i></span><small>${fadeText(x.life)}</small></span></button>`;
 }
 function hotBlocks(c) {
@@ -1065,7 +1081,7 @@ function hotBlocks(c) {
     ${items.length ? `<div class="hot-list">${cards(HOT_MAX)}</div><button class="hot-all" data-view="updates">See all updates${svg('chev')}</button>`
       : `<div class="hot-empty"><b>All quiet right now</b><p>New updates from ${esc(lead())} appear here and stay for ${HOT_DAYS} days.</p></div>`}
     <p class="hot-note">Each card stays for ${HOT_DAYS} days, then clears itself. The full history is always in Updates.</p></aside>`;
-  const strip = items.length ? `<section class="hot-strip" aria-label="Hot right now">${head(`Swipe for more · each fades in ${HOT_DAYS} days`)}<div class="hot-row">${cards(6)}</div></section>` : '';
+  const strip = items.length ? `<section class="hot-strip" aria-label="Hot right now">${head(`Swipe for more · each fades in ${HOT_DAYS} days`)}<div class="hot-row">${cards(8)}</div></section>` : '';
   items.forEach((x) => HOT_SHOWN.add(x.key));
   // After a few seconds on the page, the "new" dots fade: next visit, only newer cards carry one.
   if (fresh && !hotSeenT) hotSeenT = setTimeout(() => { hotSeenT = null; hotMarkSeen(items.map((x) => x.key)); document.querySelectorAll('.hc.unseen').forEach((el) => el.classList.add('seen')); }, 6000);
