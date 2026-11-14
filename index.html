@@ -253,6 +253,15 @@
   .q-due-i.show { position: static; width: auto; height: 36px; opacity: 1; pointer-events: auto; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; color-scheme: light dark; }
   .q-due-c.open .q-due-b { display: none; }
   .q-all { margin-top: 22px; scroll-margin-top: 12px; }
+  .q-h { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .q-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--accentSoft); color: var(--accent); font-size: 11.5px; font-weight: 600; }
+  .q-new { font-style: normal; display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 99px; background: var(--accentSoft); color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .02em; vertical-align: 1px; }
+  .q-old { margin: -8px 0 6px; border-top: 1px solid var(--line); }
+  .q-old summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 14px 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .q-old summary::-webkit-details-marker { display: none; }
+  .q-old summary .q-n { background: var(--goodSoft); color: var(--good); }
+  .q-old summary .chev { margin-left: auto; transition: transform .2s; }
+  .q-old[open] summary .chev { transform: rotate(90deg); }
   .p-empty a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
   .action-b .btn + .btn { margin-left: 8px; }
   .btn:disabled { opacity: .4; cursor: default; }
@@ -450,7 +459,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '459b0d8b36dd'; // set when the tracker is published
+const PAGE_VERSION = '464f7c468646'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -536,7 +545,7 @@ function msgHtml(m) {
   const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : `<a class="file-link" href="${fileUrl(m, i)}" target="_blank" rel="noopener" download="${esc(f.name || 'document')}">${svg('doc')}${esc(f.name || 'Document')}</a>`)).join('');
   return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : m.kind === 'signed-doc' ? '<span class="ok-tag">Signed copy</span>' : m.kind === 'due' ? '<span class="ok-tag">Date set</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
 }
-const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : (key === 'q:all' ? '<p class="cm-note">One voice note or message covering all 8 is perfect. Just say the question number before each answer, for example “one: the short page”.</p>' : /^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
+const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : (key === 'q:all' ? '<p class="cm-note">One voice note or message covering them all is perfect. Just say the question number before each answer, for example “one: the short page”.</p>' : /^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
 function filesHtml(key) {
   return draft(key).files.map((f, i) => (/^image\//.test(f.type)
     ? `<div class="att"><img src="${f.url}" alt="Image to send"><div class="att-a"><button data-act="crop" data-key="${key}" data-i="${i}">Crop</button><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove image">${svg('x')}</button></div></div>`
@@ -952,7 +961,7 @@ function compute() {
   ].map(withSent).sort(byBy);
   const needNow = nowAll.filter((n) => !n.sent);
   const qOpen = (B.questions || []).filter((q) => !answered(q.id));
-  if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: `Your input · ${qOpen.length} to answer`, by: qDue() });
+  if (qOpen.length) needNow.unshift({ kind: 'view', id: 'questions', icon: 'chat', title: B.questionsTitle || 'Questions for you', sub: qSplit().fresh ? `New · ${plural(qOpen.length, 'question')} since your last answers` : `Your input · ${qOpen.length} to answer`, by: qDue() });
   const seen = new Set(nowAll.map((n) => n.kind + n.id));
   const horizon = addDays(today, 21);
   const soonAll = [
@@ -1275,18 +1284,30 @@ function vDoc(d) {
   h += `<div class="note info"><h4>Where to find it</h4><p>${esc(lead())} sends documents as PDF. If anything needs changing, comment below or send a voice note.</p></div>`;
   return h + commentsHtml(`doc:${d.id}`, false);
 }
+// Questions added after some were already answered are "new": they get their own section at the top, and the answered ones fold away.
+const qSplit = () => { const qs = B.questions || [], open = qs.filter((q) => !answered(q.id)), done = qs.filter((q) => answered(q.id)); return { qs, open, done, fresh: done.length > 0 && open.length > 0 }; };
+const qIsNew = (q) => !answered(q.id) && !!q.added && qSplit().done.length > 0;
 function vQuestions() {
-  const qs = B.questions || [];
-  const left = qs.filter((q) => !answered(q.id)).length;
+  const { qs, open, done, fresh } = qSplit();
+  const row = (q) => { const i = qs.indexOf(q), own = answeredOwn(q.id), ok = own || answeredAll(q.id), nw = !ok && fresh && !!q.added; return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${nw ? `<i class="q-new">New</i>Added ${esc(fmt(q.added))}` : own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; };
+  const list = (arr) => `<div class="p-list">${arr.map(row).join('')}</div>`;
+  const all = `<a href="#qall" data-qall>answer them all at once</a>`;
+  const intro = fresh
+    ? `Thank you, your ${plural(done.length, 'answer')} ${done.length === 1 ? 'is' : 'are'} in. ${open.length === 1 ? 'One new question has' : `${open.length} new questions have`} come up since then, listed first. Answer by typing or with a voice note, or ${all} in a single voice note or message.`
+    : `Answer each one by typing or with a voice note, or ${all} in a single voice note or message. Whichever is easier. ${open.length ? `${open.length} of ${qs.length} still to answer.` : 'All answered, thank you!'}`;
+  const due = open.length ? `<div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>` : '';
+  const body = fresh
+    ? `<h4 class="q-h">New questions <span class="q-n">${open.length}</span></h4>${list(open)}<details class="q-old"><summary>Already answered <span class="q-n">${done.length}</span>${svg('chev', 'chev')}</summary>${list(done)}</details>`
+    : list(qs);
   return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
-    <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, or <a href="#qall" data-qall>answer them all at once</a> in a single voice note or message. Whichever is easier. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
-    <div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>
-    <div class="p-list">${qs.map((q, i) => { const own = answeredOwn(q.id), ok = own || answeredAll(q.id); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>
+    <p class="p-empty" style="color:var(--ink2)">${intro}</p>
+    ${due}
+    ${body}
     <div id="qall" class="q-all">${commentsHtml('q:all', false, 'Answer them all at once')}</div>`;
 }
 function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
-  let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}</div><h3>${esc(q.q)}</h3>`;
+  let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? ' · New' : ''}</div><h3>${esc(q.q)}</h3>`;
   if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   h += commentsHtml(`q:${q.id}`, false, 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
