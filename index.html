@@ -450,7 +450,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = 'e0cb3dcb3424'; // set when the tracker is published
+const PAGE_VERSION = '459b0d8b36dd'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -849,10 +849,17 @@ const accessById = (id) => B.access.find((a) => a.id === id);
 const docById = (id) => (B.documents || []).find((d) => d.id === id);
 const qById = (id) => (B.questions || []).find((q) => q.id === id);
 const qReplies = (key) => (FB.on ? thread(key).filter((m) => m.role === 'client' && m.kind !== 'due') : []);
-const answeredAll = () => qReplies('q:all').length > 0;
+// An "answer all at once" reply only covers the questions that existed when it was sent (questions carry an "added" date).
+const qAdded = (id) => ((qById(id) || {}).added || '');
+const answeredAll = (id) => qReplies('q:all').some((m) => !qAdded(id) || String(m.at || '').slice(0, 10) >= qAdded(id));
 const answeredOwn = (id) => qReplies(`q:${id}`).length > 0;
-const answered = (id) => answeredOwn(id) || answeredAll();
-const qDue = () => { const set = FB.on ? thread('q:all').filter((m) => m.role === 'client' && m.kind === 'due' && /^\d{4}-\d{2}-\d{2}$/.test(m.due || '')).pop() : null; return set ? set.due : ((B.questions || [])[0] || {}).due || null; };
+const answered = (id) => answeredOwn(id) || answeredAll(id);
+const qDue = () => {
+  const open = (B.questions || []).filter((q) => !answered(q.id)), newest = open.map((q) => q.added || '').sort().pop() || '';
+  const set = FB.on ? thread('q:all').filter((m) => m.role === 'client' && m.kind === 'due' && /^\d{4}-\d{2}-\d{2}$/.test(m.due || '')).pop() : null;
+  if (set && (!newest || String(set.at || '').slice(0, 10) >= newest)) return set.due;
+  return (open[0] || (B.questions || [])[0] || {}).due || null;
+};
 const longDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 const phaseOf = (id) => B.phases.find((p) => p.id === id) || { name: '', color: '#999' };
 const who = (o) => (B.meta.owners || {})[o] || o;
@@ -1274,7 +1281,7 @@ function vQuestions() {
   return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
     <p class="p-empty" style="color:var(--ink2)">Answer each one by typing or with a voice note, or <a href="#qall" data-qall>answer them all at once</a> in a single voice note or message. Whichever is easier. ${left ? `${left} of ${qs.length} still to answer.` : 'All answered, thank you!'}</p>
     <div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>
-    <div class="p-list">${qs.map((q, i) => { const own = answeredOwn(q.id), ok = own || answeredAll(); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>
+    <div class="p-list">${qs.map((q, i) => { const own = answeredOwn(q.id), ok = own || answeredAll(q.id); return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; }).join('')}</div>
     <div id="qall" class="q-all">${commentsHtml('q:all', false, 'Answer them all at once')}</div>`;
 }
 function vQuestion(q) {
