@@ -255,7 +255,13 @@
   .q-all { margin-top: 22px; scroll-margin-top: 12px; }
   .q-h { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; font-size: 13px; font-weight: 600; color: var(--ink); }
   .q-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--accentSoft); color: var(--accent); font-size: 11.5px; font-weight: 600; }
-  .q-new { font-style: normal; display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 99px; background: var(--accentSoft); color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: .02em; vertical-align: 1px; }
+  .q-new { font-style: normal; display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 99px; background: var(--good); color: var(--surface); font-size: 11px; font-weight: 600; letter-spacing: .02em; vertical-align: 1px; }
+  .row.new-q { background: var(--goodSoft); box-shadow: inset 4px 0 0 var(--good); }
+  .row.new-q:hover { background: color-mix(in srgb, var(--good) 16%, var(--surface)); }
+  .row.new-q .kind { background: color-mix(in srgb, var(--good) 22%, var(--goodSoft)); color: var(--good); } .row.new-q .row-t small { color: var(--ink2); }
+  .panel.new-q { border-color: var(--good); box-shadow: inset 5px 0 0 var(--good), 0 24px 70px rgba(0,0,0,.18); }
+  .panel.new-q .p-eye { color: var(--good); font-weight: 600; } .panel.new-q .p-eye .q-new { margin: 0 0 0 4px; }
+  .q-h.new-q .q-n { background: var(--goodSoft); color: var(--good); }
   .q-old { margin: -8px 0 6px; border-top: 1px solid var(--line); }
   .q-old summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 14px 0; font-size: 13px; font-weight: 600; color: var(--muted); }
   .q-old summary::-webkit-details-marker { display: none; }
@@ -459,7 +465,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '464f7c468646'; // set when the tracker is published
+const PAGE_VERSION = '848f26aaa472'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -997,7 +1003,8 @@ function taskRow(t) {
 function needRow(n, tone = '') {
   const w = tone === 'done' ? { text: 'Received', cls: 'done' } : tone === 'sent' ? { text: sentText(n.sent), cls: 'sent' } : byWhen(n.by);
   const attr = n.kind === 'access' ? `data-access="${n.id}"` : n.kind === 'view' ? `data-view="${n.id}"` : `data-task="${n.id}"`;
-  return `<button class="row" ${attr}><span class="kind ${tone}">${svg(tone === 'done' || tone === 'sent' ? 'check' : n.icon)}</span><span class="row-t">${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
+  const nq = !tone && n.kind === 'view' && n.id === 'questions' && qSplit().fresh, nqN = nq ? qSplit().open.length : 0;
+  return `<button class="row${nq ? ' new-q' : ''}" ${attr}><span class="kind ${tone}">${svg(tone === 'done' || tone === 'sent' ? 'check' : n.icon)}</span><span class="row-t">${nq ? `<i class="q-new">${nqN > 1 ? 'New questions' : 'New question'}</i>` : ''}${esc(n.title)}<small>${esc(n.sub)}<span class="m-when ${w.cls}"> · ${w.text}</span></small></span><span class="when ${w.cls}">${w.text}</span>${ccHtml(countFor([`${n.kind}:${n.id}`]))}${svg('chev', 'chev')}</button>`;
 }
 function feedRow(f) {
   const label = f.kind === 'done' ? '<em class="done">Done</em> ' : f.kind === 'start' ? '<em>Started</em> ' : '';
@@ -1289,7 +1296,7 @@ const qSplit = () => { const qs = B.questions || [], open = qs.filter((q) => !an
 const qIsNew = (q) => !answered(q.id) && !!q.added && qSplit().done.length > 0;
 function vQuestions() {
   const { qs, open, done, fresh } = qSplit();
-  const row = (q) => { const i = qs.indexOf(q), own = answeredOwn(q.id), ok = own || answeredAll(q.id), nw = !ok && fresh && !!q.added; return `<button class="row" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${nw ? `<i class="q-new">New</i>Added ${esc(fmt(q.added))}` : own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; };
+  const row = (q) => { const i = qs.indexOf(q), own = answeredOwn(q.id), ok = own || answeredAll(q.id), nw = !ok && fresh && !!q.added; return `<button class="row${nw ? ' new-q' : ''}" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${nw ? `<i class="q-new">New</i>Added ${esc(fmt(q.added))}` : own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; };
   const list = (arr) => `<div class="p-list">${arr.map(row).join('')}</div>`;
   const all = `<a href="#qall" data-qall>answer them all at once</a>`;
   const intro = fresh
@@ -1297,9 +1304,9 @@ function vQuestions() {
     : `Answer each one by typing or with a voice note, or ${all} in a single voice note or message. Whichever is easier. ${open.length ? `${open.length} of ${qs.length} still to answer.` : 'All answered, thank you!'}`;
   const due = open.length ? `<div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>` : '';
   const body = fresh
-    ? `<h4 class="q-h">New questions <span class="q-n">${open.length}</span></h4>${list(open)}<details class="q-old"><summary>Already answered <span class="q-n">${done.length}</span>${svg('chev', 'chev')}</summary>${list(done)}</details>`
+    ? `<h4 class="q-h new-q">New questions <span class="q-n">${open.length}</span></h4>${list(open)}<details class="q-old"><summary>Already answered <span class="q-n">${done.length}</span>${svg('chev', 'chev')}</summary>${list(done)}</details>`
     : list(qs);
-  return `<div class="p-eye">${svg('chat', 'ic')}Questions for you</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
+  return `<div class="p-eye">${svg('chat', 'ic')}Questions for you${fresh ? `<i class="q-new">${open.length > 1 ? 'New questions' : 'New question'}</i>` : ''}</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
     <p class="p-empty" style="color:var(--ink2)">${intro}</p>
     ${due}
     ${body}
@@ -1307,7 +1314,7 @@ function vQuestions() {
 }
 function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
-  let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? ' · New' : ''}</div><h3>${esc(q.q)}</h3>`;
+  let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? '<i class="q-new">New question</i>' : ''}</div><h3>${esc(q.q)}</h3>`;
   if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   h += commentsHtml(`q:${q.id}`, false, 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
@@ -1345,6 +1352,7 @@ function drawPanel(keep) {
   else if (cur.type === 'doc') { const d = docById(cur.id); if (!d) return closePanel(); html = vDoc(d); }
   else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, questions: vQuestions, weekly: vWeekly, try: vTry }[cur.type]();
   const top = keep ? ($('.p-body', el) || {}).scrollTop || 0 : 0;
+  el.classList.toggle('new-q', (cur.type === 'questions' && qSplit().fresh) || (cur.type === 'question' && qIsNew(qById(cur.id))));
   el.innerHTML = `<div class="p-bar">${ui.stack.length > 1 ? `<button class="p-btn" data-back>${svg('back')}Back</button>` : '<span></span>'}<button class="p-btn" data-close aria-label="Close">${svg('x')}</button></div><div class="p-body">${html}</div>`;
   $('.p-body', el).scrollTop = top;
 }
@@ -1360,7 +1368,7 @@ function openPanel(type, id, push) {
 function closePanel() {
   if (rec) return toast('Stop the voice note first');
   ui.stack = [];
-  $('#panel').classList.remove('on'); $('#scrim').classList.remove('on'); $('#panel').setAttribute('aria-hidden', 'true');
+  $('#panel').classList.remove('on', 'new-q'); $('#scrim').classList.remove('on'); $('#panel').setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
   if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
 }
@@ -1385,8 +1393,11 @@ async function setQDue(v, input) {
   } catch (e) { input.value = was; toast(e.message); }
   paintPage(); drawPanel(true);
 }
+function openParam() {
+  return new URLSearchParams(location.search).get('open') || new URLSearchParams(location.hash.slice(1)).get('open') || '';
+}
 function openFromLink() {
-  const o = new URLSearchParams(location.search).get('open') || new URLSearchParams(location.hash.slice(1)).get('open');
+  const o = openParam();
   if (!o) return;
   const [type, id] = o.split(':');
   if (['needs', 'updates', 'docs', 'about', 'message', 'questions', 'weekly', 'try'].includes(type) && !id) return openPanel(type);
@@ -1425,7 +1436,11 @@ async function load(first) {
     try {
       const j = await (await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
       const u = j.preview || j.url;
-      if (u) { location.replace('/site/' + new URL(u).hash); return; }
+      if (u) {
+        const dest = new URL(u, location.origin), o = openParam();
+        if (o && !new URLSearchParams(dest.hash.slice(1)).get('open')) dest.hash += (dest.hash && dest.hash !== '#' ? '&' : '') + 'open=' + encodeURIComponent(o);
+        location.replace('/site/' + dest.hash); return;
+      }
     } catch {}
   }
   try {
@@ -1524,7 +1539,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && ui.stack.length) closePanel();
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { const c = e.target.closest && e.target.closest('.cmp'); if (c) sendMsg(c.dataset.key, 'comment'); }
 });
-window.addEventListener('hashchange', () => load(true));
+window.addEventListener('hashchange', async () => { await load(false); if (B) openFromLink(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(false); });
 load(true);
 setInterval(() => load(false), 60000);
