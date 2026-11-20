@@ -553,7 +553,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '37ff45cba763'; // set when the tracker is published
+const PAGE_VERSION = '70428681a0f5'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1576,7 +1576,7 @@ const nxCommentsHtml = () => commentsHtml(`note:${NX.id}`, false, `Comments · $
 function nxToolsVoice() { return NX.rec ? `<i class="rdot"></i><b class="nx-rt">${fmtDur((Date.now() - NX.rec.t0) / 1000)}</b><span>Stop</span>` : `${svg('mic')}<span>Voice note</span>`; }
 function nxMainHtml() {
   if (!FB.on) return `<div class="nx-blank"><h2>My notes</h2><p>${esc(FB.reason)}</p></div>`;
-  if (!NX.id) return `<div class="nx-blank"><h2>Your notes, as pages</h2><p>Keep ideas, plans and thoughts here, one page per topic. Add headings, checklists, images, PDFs and voice notes. ${esc(lead())} reads each page and can reply under it.</p><button class="btn" data-nx="new">${svg('plus')}New note</button></div>`;
+  if (!NX.id) return `<div class="nx-blank"><h2>${notePages().length || quickNotes().length ? 'Pick a page on the left' : 'No notes yet'}</h2><p>${notePages().length || quickNotes().length ? '' : 'Nothing has been written here so far. '}Keep ideas, plans and thoughts here, one page per topic. Add headings, checklists, images, PDFs and voice notes. ${esc(lead())} reads each page and can reply under it.</p><button class="btn" data-nx="new">${svg('plus')}New note</button></div>`;
   if (NX.id === 'quick') return `<div class="nx-doc"><div class="nx-meta">Notes written before pages · newest first</div><h1 class="nx-h">Quick notes</h1>
     <div class="cm" data-cm="notes" style="border-top:0;margin-top:8px;padding-top:0"><h4>Add a quick note</h4>${composerHtml('notes')}<h4 style="margin-top:18px">Earlier notes</h4><div class="cm-list">${threadHtml('notes')}</div></div></div>`;
   const p = notePage(NX.id);
@@ -1609,7 +1609,7 @@ function nxPaintList() {
   const qRow = quick.length && (!q || 'quick notes'.includes(q) || quick.some((m) => String(m.text || '').toLowerCase().includes(q)))
     ? `<button class="nx-item ${NX.id === 'quick' ? 'on' : ''}" data-nxp="quick"><b>Quick notes</b><small>${plural(quick.length, 'note')} · from before pages</small></button>` : '';
   el.innerHTML = shown.map((r) => `<button class="nx-item ${NX.id === r.id ? 'on' : ''}" data-nxp="${r.id}"><b>${esc(r.title || 'Untitled')}</b><small>${esc(r.sub)}</small></button>`).join('') + qRow
-    + (shown.length || qRow ? '' : `<p class="nx-empty-l">${q ? 'No notes match.' : 'No notes yet. Start with “New note”.'}</p>`);
+    + (shown.length || qRow ? '' : `<p class="nx-empty-l">${q ? 'No notes match.' : 'No notes yet. Click “New note” to start the first page.'}</p>`);
 }
 function nxPaintAtts() {
   const box = $('#notes .nx-atts'); if (!box || !NX.id || NX.id === 'quick') return;
