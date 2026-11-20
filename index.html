@@ -465,7 +465,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '848f26aaa472'; // set when the tracker is published
+const PAGE_VERSION = '569a34938ec9'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -551,7 +551,7 @@ function msgHtml(m) {
   const files = (m.files || []).map((f, i) => (/^image\//.test(f.type) ? `<img src="${fileUrl(m, i)}" alt="Attached image" data-zoom>` : /^audio\//.test(f.type) ? `<audio controls preload="metadata" src="${fileUrl(m, i)}"></audio>` : `<a class="file-link" href="${fileUrl(m, i)}" target="_blank" rel="noopener" download="${esc(f.name || 'document')}">${svg('doc')}${esc(f.name || 'Document')}</a>`)).join('');
   return `<div class="msg ${m.role === 'lead' ? 'me' : ''}"><div class="msg-h"><b>${esc(m.author || 'Guest')}</b><span>${stampAt(m.at)}</span>${m.kind === 'approval' ? '<span class="ok-tag">Approved</span>' : m.kind === 'signature' ? '<span class="ok-tag">Signed</span>' : m.kind === 'signed-doc' ? '<span class="ok-tag">Signed copy</span>' : m.kind === 'due' ? '<span class="ok-tag">Date set</span>' : ''}</div>${m.text && !(m.kind === 'approval' && m.text === 'Approved') ? `<p>${esc(m.text)}</p>` : ''}${files}</div>`;
 }
-const threadHtml = (key) => { const th = thread(key); return th.length ? th.map(msgHtml).join('') : (key === 'q:all' ? '<p class="cm-note">One voice note or message covering them all is perfect. Just say the question number before each answer, for example “one: the short page”.</p>' : /^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
+const threadHtml = (key) => { const th = key === 'notes' ? thread(key).reverse() : thread(key); return th.length ? th.map(msgHtml).join('') : key === 'notes' ? '<p class="cm-note">Nothing here yet. Your notes will appear here, newest first.</p>' : (key === 'q:all' ? '<p class="cm-note">One voice note or message covering them all is perfect. Just say the question number before each answer, for example “one: the short page”.</p>' : /^q:/.test(key) ? '<p class="cm-note">Type your answer below or record a voice note. A short answer is fine. You can attach files too.</p>' : '<p class="cm-note">Questions, changes or feedback? Write below, paste or attach a screenshot, or record a voice note.</p>'); };
 function filesHtml(key) {
   return draft(key).files.map((f, i) => (/^image\//.test(f.type)
     ? `<div class="att"><img src="${f.url}" alt="Image to send"><div class="att-a"><button data-act="crop" data-key="${key}" data-i="${i}">Crop</button><button data-act="rm" data-key="${key}" data-i="${i}" aria-label="Remove image">${svg('x')}</button></div></div>`
@@ -562,7 +562,7 @@ function composerHtml(key) {
   const d = draft(key), r = rec && rec.key === key, s = FB.sending === key;
   return `<div class="cmp" data-key="${key}">
     ${myName() ? '' : '<input class="cmp-name" placeholder="Your name" maxlength="40" autocomplete="name">'}
-    <textarea class="cmp-text" rows="3" maxlength="4000" placeholder="${/^q:/.test(key) ? 'Type your answer…' : 'Write a comment. You can paste a screenshot here too.'}">${esc(d.text)}</textarea>
+    <textarea class="cmp-text" rows="3" maxlength="4000" placeholder="${/^q:/.test(key) ? 'Type your answer…' : key === 'notes' ? 'Write a note. You can paste a screenshot here too.' : 'Write a comment. You can paste a screenshot here too.'}">${esc(d.text)}</textarea>
     <div class="cmp-files">${filesHtml(key)}</div>
     <div class="cmp-bar">
       <label class="cmp-b" title="Add an image">${svg('image')}<span>Image or file</span><input type="file" accept="image/*,application/pdf" multiple hidden data-pick="${key}"></label>
@@ -1050,7 +1050,7 @@ function hotWhen(x) {
   return a <= 0 ? 'Today' : a === 1 ? 'Yesterday' : fmtW(x.date);
 }
 // Every card is a notification about one thing on this page, and tapping it opens that thing.
-const VIEW_TITLE = { questions: 'Questions', weekly: 'This week', try: 'Try it', needs: 'Needed from you', updates: 'Updates', docs: 'Documents', about: 'How we work' };
+const VIEW_TITLE = { questions: 'Questions', weekly: 'This week', try: 'Try it', needs: 'Needed from you', updates: 'Updates', docs: 'Documents', about: 'How we work', notes: 'My notes' };
 const REF_ICON = { task: 'list', doc: 'doc', access: 'key', q: 'chat', week: 'week', build: 'phone', phase: 'list', view: 'info' };
 function hotRef(ref) {
   const m = /^(task|doc|access|q|week|build|phase|view):([A-Za-z0-9_-]+)$/.exec(ref || '');
@@ -1129,7 +1129,7 @@ function page(c) {
       <span class="pc-name">${esc(p.name)}</span><span class="pc-d">${fmt(p.start)} – ${fmt(p.end)}</span>
       <span class="pc-bot">${mring(x.ts.length ? x.dn / x.ts.length : 0, p.color)}<span><b>${x.dn}</b> of ${x.ts.length} done</span>${ccHtml(x.comments)}</span></button>`;
   }).join('');
-  const general = countFor(['general']);
+  const general = countFor(['general']), notesN = countFor(['notes']);
   const hot = hotBlocks(c);
   return `<div class="shell"><div class="page">
     <div class="top"><div class="brand"><span class="mark">${esc((M.project || 'P')[0])}</span><span>${esc(M.project)}</span><span>Project tracker</span></div>
@@ -1137,6 +1137,7 @@ function page(c) {
     <nav class="quick" aria-label="Sections">
       <button class="qb" data-view="needs">${svg('list')}Needed from you${c.needNow.length ? ` <span class="count">${c.needNow.length}</span>` : ''}</button>
       ${(B.questions || []).length ? `<button class="qb" data-view="questions">${svg('chat')}Questions${c.qOpen.length ? ` <span class="count">${c.qOpen.length}</span>` : ' ✓'}</button>` : ''}
+      <button class="qb" data-view="notes">${svg('pen')}My notes${notesN ? ` · ${notesN}` : ''}</button>
       <button class="qb" data-view="weekly">${svg('week')}This week</button>
       <button class="qb" data-view="try">${svg('phone')}Try it</button>
       <button class="qb" data-view="updates">${svg('clock')}Updates</button>
@@ -1325,6 +1326,14 @@ function vMessage() {
     <p class="p-empty" style="color:var(--ink2)">Ask anything, or send a screenshot or a voice note. To comment on a specific task, open the task and use the comments there.</p>
     ${commentsHtml('general', false, 'Conversation')}`;
 }
+function vNotes() {
+  const body = FB.on
+    ? `<div class="cm" data-cm="notes"><h4>Add a note</h4>${composerHtml('notes')}<h4 style="margin-top:18px">Your notes</h4><div class="cm-list">${threadHtml('notes')}</div></div>`
+    : `<div class="cm"><h4>Your notes</h4><p class="cm-note">${esc(FB.reason)}</p></div>`;
+  return `<div class="p-eye">${svg('pen', 'ic')}My notes</div><h3>My notes</h3>
+    <p class="p-empty" style="color:var(--ink2)">Your own space for ideas and thoughts that don't belong to one task. Write a note, record a voice note, or add an image or a PDF. Newest notes are at the top. I see each note and can reply here, and I'll turn ideas into tasks where they fit.</p>
+    ${body}`;
+}
 function vAbout() {
   const k = B.contact || {};
   const initials = (k.name || 'R').split(' ').map((w) => w[0]).slice(0, 2).join('');
@@ -1350,7 +1359,7 @@ function drawPanel(keep) {
   else if (cur.type === 'build') { const b = (B.builds || []).find((x) => x.id === cur.id); if (!b) return closePanel(); html = vBuild(b); }
   else if (cur.type === 'question') { const q = qById(cur.id); if (!q) return closePanel(); html = vQuestion(q); }
   else if (cur.type === 'doc') { const d = docById(cur.id); if (!d) return closePanel(); html = vDoc(d); }
-  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, questions: vQuestions, weekly: vWeekly, try: vTry }[cur.type]();
+  else html = { needs: vNeeds, updates: vUpdates, about: vAbout, docs: vDocs, message: vMessage, notes: vNotes, questions: vQuestions, weekly: vWeekly, try: vTry }[cur.type]();
   const top = keep ? ($('.p-body', el) || {}).scrollTop || 0 : 0;
   el.classList.toggle('new-q', (cur.type === 'questions' && qSplit().fresh) || (cur.type === 'question' && qIsNew(qById(cur.id))));
   el.innerHTML = `<div class="p-bar">${ui.stack.length > 1 ? `<button class="p-btn" data-back>${svg('back')}Back</button>` : '<span></span>'}<button class="p-btn" data-close aria-label="Close">${svg('x')}</button></div><div class="p-body">${html}</div>`;
@@ -1375,7 +1384,7 @@ function closePanel() {
 
 /* ---------- Render + live ---------- */
 function paintPage() { C = compute(); const y = window.scrollY; $('#app').innerHTML = page(C); window.scrollTo(0, y); stamp(); }
-// A link can open a section directly: ?open=questions (or needs, updates, docs, about, message, q:ID, task:ID, doc:ID, access:ID).
+// A link can open a section directly: ?open=questions (or needs, updates, docs, about, message, notes, q:ID, task:ID, doc:ID, access:ID).
 function openAllAtOnce() {
   if (!(ui.stack.length && ui.stack[ui.stack.length - 1].type === 'questions')) openPanel('questions');
   setTimeout(() => { const el = document.getElementById('qall'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
@@ -1400,7 +1409,7 @@ function openFromLink() {
   const o = openParam();
   if (!o) return;
   const [type, id] = o.split(':');
-  if (['needs', 'updates', 'docs', 'about', 'message', 'questions', 'weekly', 'try'].includes(type) && !id) return openPanel(type);
+  if (['needs', 'updates', 'docs', 'about', 'message', 'notes', 'questions', 'weekly', 'try'].includes(type) && !id) return openPanel(type);
   if (type === 'week' && (B.weekly || []).some((w) => w.id === id)) return openPanel('week', id);
   if (type === 'build' && (B.builds || []).some((b) => b.id === id)) return openPanel('build', id);
   if (type === 'q' && id === 'all') return openAllAtOnce();
