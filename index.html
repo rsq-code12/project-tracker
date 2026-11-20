@@ -44,7 +44,7 @@
   .live.flash { color: var(--good); }
   .live.stale .pulse { background: var(--faint); animation: none; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18,128,92,.45); } 70% { box-shadow: 0 0 0 7px rgba(18,128,92,0); } 100% { box-shadow: 0 0 0 0 rgba(18,128,92,0); } }
-  .quick { display: flex; gap: 6px; margin: 18px -20px 0; padding: 0 20px 2px; overflow-x: auto; scrollbar-width: none; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px 6px; margin: 18px 0 0; padding: 0 0 2px; }
   .quick::-webkit-scrollbar { display: none; }
   .qb { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; font-weight: 500; color: var(--ink2); white-space: nowrap; transition: border-color .12s; }
   .qb:hover { border-color: var(--ink2); color: var(--ink); }
@@ -322,7 +322,7 @@
 
   @media (max-width: 640px) {
     .page { padding: 0 16px 40px; }
-    .quick { margin: 16px -16px 0; padding: 0 16px 2px; }
+    .quick { margin: 16px 0 0; padding: 0 0 2px; }
     .qb.primary { margin-left: 0; order: -1; }
     .status { padding: 30px 0 22px; }
     .row { padding: 13px 14px; grid-template-columns: 20px 1fr auto 14px; }
@@ -465,7 +465,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '569a34938ec9'; // set when the tracker is published
+const PAGE_VERSION = '41af9993fefb'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
