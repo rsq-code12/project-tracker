@@ -168,6 +168,9 @@
   .note.warn { background: var(--warnSoft); } .note.warn h4 { color: var(--warn); } .note.warn .ul li::before { background: var(--warn); }
   .note.good { background: var(--goodSoft); } .note.good h4 { color: var(--good); }
   .note.info { background: var(--accentSoft); } .note.info h4 { color: var(--accent); }
+  .note .qc-p + .qc-p, .note .qc-p + .qc-ul, .note .qc-ul + .qc-p { margin-top: 10px; }
+  .qc-ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink2); line-height: 1.6; } .qc-ul li + li { margin-top: 6px; }
+  .q-intro { margin: 0 0 12px; font-size: 14px; color: var(--ink2); line-height: 1.6; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; max-width: 100%; }
   .chip:hover { border-color: var(--ink2); }
@@ -553,7 +556,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = 'f1e51ebefd87'; // set when the tracker is published
+const PAGE_VERSION = '6275a0f877e6'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1385,6 +1388,17 @@ function vDoc(d) {
 }
 // Questions added after some were already answered are "new": they get their own section at the top, and the answered ones fold away.
 const qSplit = () => { const qs = B.questions || [], open = qs.filter((q) => !answered(q.id)), done = qs.filter((q) => answered(q.id)); return { qs, open, done, fresh: done.length > 0 && open.length > 0 }; };
+// Question context: paragraphs split by blank lines; lines starting with "• " become a bullet list. Shown in full.
+function qContextHtml(t) {
+  return String(t || '').split(/\n\s*\n/).map((blk) => {
+    const lines = blk.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (lines.length && lines.every((l) => l.startsWith('• '))) return `<ul class="qc-ul">${lines.map((l) => `<li>${esc(l.slice(2))}</li>`).join('')}</ul>`;
+    const head = lines.filter((l) => !l.startsWith('• ')), items = lines.filter((l) => l.startsWith('• '));
+    return `${head.length ? `<p class="qc-p">${esc(head.join(' '))}</p>` : ''}${items.length ? `<ul class="qc-ul">${items.map((l) => `<li>${esc(l.slice(2))}</li>`).join('')}</ul>` : ''}`;
+  }).join('');
+}
+const qGroupIntro = (g) => ((B.questionGroupIntros || {})[g] || '');
+const qIntrosFor = (arr) => [...new Set(arr.map((q) => q.group))].map(qGroupIntro).filter(Boolean).map((t) => `<p class="q-intro">${esc(t)}</p>`).join('');
 const qIsNew = (q) => !answered(q.id) && !!q.added && qSplit().done.length > 0;
 function vQuestions() {
   const { qs, open, done, fresh } = qSplit();
@@ -1396,7 +1410,7 @@ function vQuestions() {
     : `Answer each one by typing or with a voice note, or ${all} in a single voice note or message. Whichever is easier. ${open.length ? `${open.length} of ${qs.length} still to answer.` : 'All answered, thank you!'}`;
   const due = open.length ? `<div class="q-due"><div><b>Answer by ${esc(longDate(qDue()))}</b><small>If another date suits you better, pick it here.</small></div><div class="q-due-c"><button class="btn ghost q-due-b" data-qdue-open>Change date</button><input type="date" class="q-due-i" data-qdue min="${today}" value="${qDue()}" aria-label="Answer by date"></div></div>` : '';
   const body = fresh
-    ? `<h4 class="q-h new-q">New questions <span class="q-n">${open.length}</span></h4>${list(open)}<details class="q-old"><summary>Already answered <span class="q-n">${done.length}</span>${svg('chev', 'chev')}</summary>${list(done)}</details>`
+    ? `<h4 class="q-h new-q">New questions <span class="q-n">${open.length}</span></h4>${qIntrosFor(open)}${list(open)}<details class="q-old"><summary>Already answered <span class="q-n">${done.length}</span>${svg('chev', 'chev')}</summary>${list(done)}</details>`
     : list(qs);
   return `<div class="p-eye">${svg('chat', 'ic')}Questions for you${fresh ? `<i class="q-new">${open.length > 1 ? 'New questions' : 'New question'}</i>` : ''}</div><h3>${esc(B.questionsTitle || 'Questions')}</h3>
     <p class="p-empty" style="color:var(--ink2)">${intro}</p>
@@ -1408,6 +1422,7 @@ function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
   let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? '<i class="q-new">New question</i>' : ''}</div><h3>${esc(q.q)}</h3>`;
   if (q.closed) h += `<div class="note good"><h4>No answer needed</h4><p>${esc(q.closed)}</p></div>`;
+  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>What we plan to build</h4>${qContextHtml(q.context)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   h += commentsHtml(`q:${q.id}`, false, q.closed ? 'Comments (optional)' : 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
