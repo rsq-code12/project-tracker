@@ -169,6 +169,7 @@
   .note.good { background: var(--goodSoft); } .note.good h4 { color: var(--good); }
   .note.info { background: var(--accentSoft); } .note.info h4 { color: var(--accent); }
   .note .qc-p + .qc-p, .note .qc-p + .qc-ul, .note .qc-ul + .qc-p { margin-top: 10px; }
+  .qc-p a, .qc-ul a { overflow-wrap: anywhere; word-break: break-word; }
   .qc-ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink2); line-height: 1.6; } .qc-ul li + li { margin-top: 6px; }
   .q-intro { margin: 0 0 12px; font-size: 14px; color: var(--ink2); line-height: 1.6; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -556,7 +557,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = 'ca04af8308c0'; // set when the tracker is published
+const PAGE_VERSION = '0ca2e071a628'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1259,6 +1260,8 @@ function page(c) {
 /* ---------- Panel views ---------- */
 const ul = (a) => `<ul class="ul">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
 const chip = (t) => `<button class="chip" data-task="${t.id}">${icon(state(t).k)}<span>${esc(t.title)}</span></button>`;
+// Numbered next steps for Aoife. A single line starting with "Nothing" shows as a plain sentence.
+const stepsHtml = (st, title = 'Next steps for you') => st.length === 1 && /^nothing/i.test(st[0]) ? `<div class="note good"><h4>${esc(title)}</h4><p>${esc(st[0])}</p></div>` : `<div class="note warn"><h4>${esc(title)}</h4><ol class="ol">${st.map((x) => `<li>${qLinkify(x)}</li>`).join('')}</ol></div>`;
 function vTask(t) {
   const p = phaseOf(t.phase), s = state(t), w = when(t), I = t.info;
   const acc = B.access.filter((a) => a.tasks.includes(t.id));
@@ -1271,6 +1274,7 @@ function vTask(t) {
   if (s.sent) h += sentNote();
   if (I.what) h += `<div class="blk"><h4>What this is</h4><p>${esc(I.what)}</p></div>`;
   if (I.why) h += `<div class="blk"><h4>Why it matters</h4><p>${esc(I.why)}</p></div>`;
+  if ((I.nextSteps || []).length) h += stepsHtml(I.nextSteps);
   if (I.need.length && t.status !== 'done') h += `<div class="note warn"><h4>What we need from you</h4>${ul(I.need)}${acc.length ? `<div class="chips" style="margin-top:10px">${acc.map((a) => `<button class="chip" data-access="${a.id}">${svg('key', 'ic')}<span>${esc(a.item)}</span></button>`).join('')}</div>` : ''}</div>`;
   if (I.involves.length) h += `<div class="blk"><h4>What's involved</h4>${ul(I.involves)}</div>`;
   if (I.done) h += `<div class="note good"><h4>${t.status === 'done' ? 'Delivered' : 'Done when'}</h4><p>${esc(I.done)}</p></div>`;
@@ -1389,12 +1393,13 @@ function vDoc(d) {
 // Questions added after some were already answered are "new": they get their own section at the top, and the answered ones fold away.
 const qSplit = () => { const qs = B.questions || [], open = qs.filter((q) => !answered(q.id)), done = qs.filter((q) => answered(q.id)); return { qs, open, done, fresh: done.length > 0 && open.length > 0 }; };
 // Question context: paragraphs split by blank lines; lines starting with "• " become a bullet list. Shown in full.
+const qLinkify = (t) => esc(t).replace(/https:\/\/[^\s<]+?(?=[).,;:]?(?:\s|$))/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
 function qContextHtml(t) {
   return String(t || '').split(/\n\s*\n/).map((blk) => {
     const lines = blk.split('\n').map((l) => l.trim()).filter(Boolean);
-    if (lines.length && lines.every((l) => l.startsWith('• '))) return `<ul class="qc-ul">${lines.map((l) => `<li>${esc(l.slice(2))}</li>`).join('')}</ul>`;
+    if (lines.length && lines.every((l) => l.startsWith('• '))) return `<ul class="qc-ul">${lines.map((l) => `<li>${qLinkify(l.slice(2))}</li>`).join('')}</ul>`;
     const head = lines.filter((l) => !l.startsWith('• ')), items = lines.filter((l) => l.startsWith('• '));
-    return `${head.length ? `<p class="qc-p">${esc(head.join(' '))}</p>` : ''}${items.length ? `<ul class="qc-ul">${items.map((l) => `<li>${esc(l.slice(2))}</li>`).join('')}</ul>` : ''}`;
+    return `${head.length ? `<p class="qc-p">${qLinkify(head.join(' '))}</p>` : ''}${items.length ? `<ul class="qc-ul">${items.map((l) => `<li>${qLinkify(l.slice(2))}</li>`).join('')}</ul>` : ''}`;
   }).join('');
 }
 const qGroupIntro = (g) => ((B.questionGroupIntros || {})[g] || '');
@@ -1422,8 +1427,9 @@ function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
   let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? '<i class="q-new">New question</i>' : ''}</div><h3>${esc(q.q)}</h3>`;
   if (q.closed) h += `<div class="note good"><h4>No answer needed</h4><p>${esc(q.closed)}</p></div>`;
-  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>What we plan to build</h4>${qContextHtml(q.context)}</div>`;
+  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
+  if (!q.closed) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
   h += commentsHtml(`q:${q.id}`, false, q.closed ? 'Comments (optional)' : 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
   return h;
