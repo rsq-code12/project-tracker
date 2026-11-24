@@ -490,6 +490,14 @@
   .nx-name input { height: 34px; border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; min-width: 160px; flex: 1; }
   .nx-name .cmp-send { margin-left: 0; }
   .nx .cm { margin-top: 44px; }
+  /* Pages from Ranjit (read only, published with the tracker) */
+  .nx-side-t { margin: 10px 10px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .nx-item.lib b::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 7px; vertical-align: 2px; }
+  .lib-sum { font-size: 17px; line-height: 1.6; color: var(--ink2); margin: 4px 0 18px; }
+  .lib-body .note { margin: 14px 0; } .lib-body .note p { margin: 0; font-size: 15px; line-height: 1.6; } .lib-body .note ol { margin: 4px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.6; }
+  .lib-body .q-fig { margin: 16px 0 18px; } .lib-body .q-fig img { margin: 0 auto; max-height: none; max-width: 440px; width: 100%; }
+  .lib-body dl { margin: 6px 0 10px; } .lib-body dt { font-weight: 600; margin-top: 10px; } .lib-body dd { margin: 2px 0 0; color: var(--ink2); }
+  .lib-act { margin: 16px 0 6px; display: flex; gap: 8px; flex-wrap: wrap; }
   @media (max-width: 760px) {
     .nx-wrap { grid-template-columns: minmax(0, 1fr); }
     .nx-side { border-right: 0; }
@@ -558,7 +566,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '63ebaa5296ba'; // set when the tracker is published
+const PAGE_VERSION = '8f87d3932c8a'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1226,7 +1234,7 @@ function page(c) {
       <span class="pc-name">${esc(p.name)}</span><span class="pc-d">${fmt(p.start)} – ${fmt(p.end)}</span>
       <span class="pc-bot">${mring(x.ts.length ? x.dn / x.ts.length : 0, p.color)}<span><b>${x.dn}</b> of ${x.ts.length} done</span>${ccHtml(x.comments)}</span></button>`;
   }).join('');
-  const general = countFor(['general']), notesN = FB.on ? notePages().length : 0;
+  const general = countFor(['general']), notesN = (FB.on ? notePages().length : 0) + libPages().length;
   const hot = hotBlocks(c);
   return `<div class="shell"><div class="page">
     <div class="top"><div class="brand"><span class="mark">${esc((M.project || 'P')[0])}</span><span>${esc(M.project)}</span><span>Project tracker</span></div>
@@ -1440,6 +1448,7 @@ function vQuestion(q) {
   else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}${qPicsHtml(q)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   if (!q.closed && !q.answer) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
+  if (q.guide && libPage(`lib-${q.guide}`)) h += `<div class="lib-act"><button class="btn ghost" data-open-lib="${esc(q.guide)}">${svg('doc')}Read the full explainer in My notes</button></div>`;
   h += commentsHtml(`q:${q.id}`, false, q.closed ? 'Comments (optional)' : 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
   return h;
@@ -1459,6 +1468,33 @@ function vAbout() {
     <div class="blk"><h4>How we work</h4><ul class="ul">${(B.howWeWork || []).map((x) => `<li><span><b style="color:var(--ink);font-weight:600">${esc(x.t)}.</b> ${esc(x.d)}</span></li>`).join('')}</ul></div>
     <div class="note good"><h4>Security commitments</h4>${ul(B.commitments || [])}</div>
     <div class="blk"><h4>Comments on this page</h4><p>You can comment on any task, phase, document or access item, attach a screenshot or record a voice note. Comments are encrypted in your browser, just like the page, so only people with this link can read them.</p></div>`;
+}
+
+/* ---------- Pages from Ranjit: read-only guides published with the tracker, pinned at the top of My notes ---------- */
+// Simple blocks only (headings, text, lists, boxes, pictures, a button to a question). Pictures are SVG shown as images, so nothing in them can run.
+const LIB_ID = /^lib-[a-z0-9-]{2,40}$/;
+const libPages = () => (B.library || []).filter((p) => p && /^[a-z0-9-]{2,40}$/.test(p.id || '') && p.title);
+const libPage = (nid) => libPages().find((p) => `lib-${p.id}` === nid) || null;
+function libBlockHtml(b) {
+  if (!b || !b.type) return '';
+  const li = (arr) => (arr || []).map((x) => `<li>${qLinkify(x)}</li>`).join('');
+  switch (b.type) {
+    case 'h': return `<h2>${esc(b.text)}</h2>`;
+    case 'p': return `<p>${qLinkify(b.text)}</p>`;
+    case 'list': return `<ul>${li(b.items)}</ul>`;
+    case 'numbered': return `<ol>${li(b.items)}</ol>`;
+    case 'box': return `<div class="note ${['good', 'info', 'warn'].includes(b.tone) ? b.tone : 'info'}">${b.title ? `<h4>${esc(b.title)}</h4>` : ''}${b.text ? `<p>${qLinkify(b.text)}</p>` : ''}${b.items ? `<ol>${li(b.items)}</ol>` : ''}</div>`;
+    case 'picture': return qPicsHtml({ pictures: [b] });
+    case 'words': return `<dl>${(b.items || []).map((w) => `<dt>${esc(w.word)}</dt><dd>${esc(w.means)}</dd>`).join('')}</dl>`;
+    case 'question': return qById(b.q) ? `<div class="lib-act"><button class="btn" data-lib-q="${esc(b.q)}">${esc(b.label || 'Open the question')}</button></div>` : '';
+    default: return '';
+  }
+}
+function libMainHtml(p) {
+  return `<div class="nx-doc nx-lib"><div class="nx-meta"><span class="nx-by">From ${esc(lead())}${p.updated ? ` · Updated ${esc(longDate(p.updated))}` : ''} · Read only</span></div>
+    <h1 class="nx-h">${esc(p.title)}</h1>${p.summary ? `<p class="lib-sum">${esc(p.summary)}</p>` : ''}
+    <div class="nx-body lib-body">${(p.blocks || []).map(libBlockHtml).join('')}</div>
+    ${FB.on ? commentsHtml(`note:${p.id.replace(/-/g, '')}`, false, `Questions or comments · ${esc(lead())} replies here`) : ''}</div>`;
 }
 
 /* ---------- My notes: a separate notes space, organised as pages ---------- */
@@ -1550,7 +1586,7 @@ function nxAuto() { const t = $('#notes .nx-title'); if (t) { t.style.height = '
 function nxStatus() {
   const el = $('#notes .nx-save'); if (!el) return;
   let cls = '', txt = '';
-  if (!NX.id || NX.id === 'quick') txt = '';
+  if (!NX.id || NX.id === 'quick' || LIB_ID.test(NX.id)) txt = '';
   else if (NX.err === 'name') { cls = 'err'; txt = 'Add your name to save'; }
   else if (NX.err === 'off') { cls = 'err'; txt = 'Saved on this device only'; }
   else if (NX.saving) txt = 'Saving…';
@@ -1609,6 +1645,7 @@ function nxAfterSave(created) {
 const nxCommentsHtml = () => commentsHtml(`note:${NX.id}`, false, `Comments · ${esc(lead())} can reply here`);
 function nxToolsVoice() { return NX.rec ? `<i class="rdot"></i><b class="nx-rt">${fmtDur((Date.now() - NX.rec.t0) / 1000)}</b><span>Stop</span>` : `${svg('mic')}<span>Voice note</span>`; }
 function nxMainHtml() {
+  if (LIB_ID.test(NX.id || '') && libPage(NX.id)) return libMainHtml(libPage(NX.id));
   if (!FB.on) return `<div class="nx-blank"><h2>My notes</h2><p>${esc(FB.reason)}</p></div>`;
   if (!NX.id) return `<div class="nx-blank"><h2>${notePages().length || quickNotes().length ? 'Pick a page on the left' : 'No notes yet'}</h2><p>${notePages().length || quickNotes().length ? '' : 'Nothing has been written here so far. '}Keep ideas, plans and thoughts here, one page per topic. Add headings, checklists, images, PDFs and voice notes. ${esc(lead())} reads each page and can reply under it.</p><button class="btn" data-nx="new">${svg('plus')}New note</button></div>`;
   if (NX.id === 'quick') return `<div class="nx-doc"><div class="nx-meta">Notes written before pages · newest first</div><h1 class="nx-h">Quick notes</h1>
@@ -1642,8 +1679,10 @@ function nxPaintList() {
   const quick = quickNotes();
   const qRow = quick.length && (!q || 'quick notes'.includes(q) || quick.some((m) => String(m.text || '').toLowerCase().includes(q)))
     ? `<button class="nx-item ${NX.id === 'quick' ? 'on' : ''}" data-nxp="quick"><b>Quick notes</b><small>${plural(quick.length, 'note')} · from before pages</small></button>` : '';
-  el.innerHTML = shown.map((r) => `<button class="nx-item ${NX.id === r.id ? 'on' : ''}" data-nxp="${r.id}"><b>${esc(r.title || 'Untitled')}</b><small>${esc(r.sub)}</small></button>`).join('') + qRow
-    + (shown.length || qRow ? '' : `<p class="nx-empty-l">${q ? 'No notes match.' : 'No notes yet. Click “New note” to start the first page.'}</p>`);
+  const libs = libPages().filter((p) => !q || `${p.title} ${p.summary || ''}`.toLowerCase().includes(q));
+  const libHtml = libs.length ? `<p class="nx-side-t">From ${esc(lead())}</p>${libs.map((p) => `<button class="nx-item lib ${NX.id === `lib-${p.id}` ? 'on' : ''}" data-nxp="lib-${p.id}"><b>${esc(p.title)}</b><small>Read only${p.updated ? ` · ${esc(fmt(p.updated))}` : ''}</small></button>`).join('')}${shown.length || qRow ? '<p class="nx-side-t">Your notes</p>' : ''}` : '';
+  el.innerHTML = libHtml + shown.map((r) => `<button class="nx-item ${NX.id === r.id ? 'on' : ''}" data-nxp="${r.id}"><b>${esc(r.title || 'Untitled')}</b><small>${esc(r.sub)}</small></button>`).join('') + qRow
+    + (shown.length || qRow || libs.length ? '' : `<p class="nx-empty-l">${q ? 'No notes match.' : 'No notes yet. Click “New note” to start the first page.'}</p>`);
 }
 function nxPaintAtts() {
   const box = $('#notes .nx-atts'); if (!box || !NX.id || NX.id === 'quick') return;
@@ -1695,7 +1734,8 @@ function openNotes(id) {
   if (rec) return toast('Stop the voice note first');
   if (ui.stack.length) closePanel();
   NX.on = true; NX.err = '';
-  NX.id = id && (id === 'quick' || NOTE_ID.test(id)) ? id : window.innerWidth > 760 ? ((notePages()[0] || {}).id || (quickNotes().length ? 'quick' : null)) : null;
+  const firstLib = libPages()[0] ? `lib-${libPages()[0].id}` : null;
+  NX.id = id && (id === 'quick' || NOTE_ID.test(id) || (LIB_ID.test(id) && libPage(id))) ? id : window.innerWidth > 760 ? ((notePages()[0] || {}).id || (quickNotes().length ? 'quick' : firstLib)) : null;
   $('#notes').classList.add('on'); $('#notes').setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   nxRender();
@@ -1720,7 +1760,7 @@ async function nxOpenPage(id) {
   NX.id = id; NX.err = '';
   nxRender();
   $('#notes .nx-main').scrollTop = 0;
-  if (id && id !== 'quick' && !notePage(id)) { const t = $('#notes .nx-title'); if (t) t.focus(); }
+  if (id && id !== 'quick' && !LIB_ID.test(id) && !notePage(id)) { const t = $('#notes .nx-title'); if (t) t.focus(); }
 }
 function nxNew() {
   if (!FB.on) return toast(FB.reason || 'Notes work from the private link.');
@@ -1847,6 +1887,7 @@ function nxClick(e) {
   const li = t.closest('.nx-body ul.todo > li');
   if (li && e.clientX - li.getBoundingClientRect().left < 28) { e.preventDefault(); li.toggleAttribute('data-done'); nxInput(); return true; }
   const fm = t.closest('[data-fmt]'); if (fm) { nxFmt(fm.dataset.fmt); return true; }
+  const lq = t.closest('[data-lib-q]'); if (lq) { const qid = lq.dataset.libQ; closeNotes().then(() => { openPanel('questions'); openPanel('question', qid, true); }); return true; }
   const pg = t.closest('[data-nxp]'); if (pg) { nxOpenPage(pg.dataset.nxp); return true; }
   const a = t.closest('[data-nx]'); if (!a) return false;
   const k = a.dataset.nx;
@@ -1963,7 +2004,7 @@ function openFromLink() {
   if (!o) return;
   const [type, id] = o.split(':');
   if (['needs', 'updates', 'docs', 'about', 'message', 'notes', 'questions', 'weekly', 'try'].includes(type) && !id) return openPanel(type);
-  if (type === 'note' && NOTE_ID.test(id || '')) return openNotes(id);
+  if (type === 'note' && (NOTE_ID.test(id || '') || (LIB_ID.test(id || '') && libPage(id)))) return openNotes(id);
   if (type === 'week' && (B.weekly || []).some((w) => w.id === id)) return openPanel('week', id);
   if (type === 'build' && (B.builds || []).some((b) => b.id === id)) return openPanel('build', id);
   if (type === 'q' && id === 'all') return openAllAtOnce();
@@ -2075,6 +2116,7 @@ document.addEventListener('click', (e) => {
   const qa = t.closest('[data-qall]'); if (qa) { e.preventDefault(); return openAllAtOnce(); }
   const wk = t.closest('[data-week]'); if (wk) return openPanel('week', wk.dataset.week, inPanel);
   const bd = t.closest('[data-build]'); if (bd) return openPanel('build', bd.dataset.build, inPanel);
+  const ol = t.closest('[data-open-lib]'); if (ol) return openNotes(`lib-${ol.dataset.openLib}`);
   const qq = t.closest('[data-q]'); if (qq) return openPanel('question', qq.dataset.q, inPanel);
   const dc = t.closest('[data-doc]'); if (dc) return openPanel('doc', dc.dataset.doc, inPanel);
   const vw = t.closest('[data-view]'); if (vw) return openPanel(vw.dataset.view, null, inPanel);
