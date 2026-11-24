@@ -496,6 +496,12 @@
   .lib-sum { font-size: 17px; line-height: 1.6; color: var(--ink2); margin: 4px 0 18px; }
   .lib-body .note { margin: 14px 0; } .lib-body .note p { margin: 0; font-size: 15px; line-height: 1.6; } .lib-body .note ol { margin: 4px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.6; }
   .lib-body .q-fig { margin: 16px 0 18px; } .lib-body .q-fig img { margin: 0 auto; max-height: none; max-width: 440px; width: 100%; }
+  .lib-tw { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--line); border-radius: 12px; -webkit-overflow-scrolling: touch; }
+  .lib-t { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; line-height: 1.5; }
+  .lib-t th, .lib-t td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .lib-t thead th { background: var(--hover); font-weight: 650; }
+  .lib-t tbody th { font-weight: 600; width: 22%; color: var(--ink); }
+  .lib-t tr:last-child th, .lib-t tr:last-child td { border-bottom: 0; }
   .lib-body dl { margin: 6px 0 10px; } .lib-body dt { font-weight: 600; margin-top: 10px; } .lib-body dd { margin: 2px 0 0; color: var(--ink2); }
   .lib-act { margin: 16px 0 6px; display: flex; gap: 8px; flex-wrap: wrap; } .lib-act .btn { display: inline-flex; align-items: center; gap: 8px; } .lib-act svg { width: 16px; height: 16px; flex: none; }
   @media (max-width: 760px) {
@@ -566,7 +572,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '2bf9ef05cdb7'; // set when the tracker is published
+const PAGE_VERSION = '8a3f3d57d700'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1480,6 +1486,8 @@ function libBlockHtml(b) {
   const li = (arr) => (arr || []).map((x) => `<li>${qLinkify(x)}</li>`).join('');
   switch (b.type) {
     case 'h': return `<h2>${esc(b.text)}</h2>`;
+    case 'h3': return `<h3>${esc(b.text)}</h3>`;
+    case 'table': return `<div class="lib-tw"><table class="lib-t">${b.head ? `<thead><tr>${b.head.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>` : ''}<tbody>${(b.rows || []).map((r) => `<tr>${r.map((c, i) => i === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${qLinkify(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     case 'p': return `<p>${qLinkify(b.text)}</p>`;
     case 'list': return `<ul>${li(b.items)}</ul>`;
     case 'numbered': return `<ol>${li(b.items)}</ol>`;
