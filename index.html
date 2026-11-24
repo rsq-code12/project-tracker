@@ -557,7 +557,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '0ca2e071a628'; // set when the tracker is published
+const PAGE_VERSION = 'e293bdb78dbc'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -963,7 +963,8 @@ const answeredAll = (id) => qReplies('q:all').some((m) => !qAdded(id) || String(
 const answeredOwn = (id) => qReplies(`q:${id}`).length > 0;
 // A question we settled ourselves carries a short "Done: …" note, so it needs no answer.
 const qClosed = (id) => ((qById(id) || {}).closed || '');
-const answered = (id) => !!qClosed(id) || answeredOwn(id) || answeredAll(id);
+const qAnswer = (id) => ((qById(id) || {}).answer || '');
+const answered = (id) => !!qClosed(id) || !!qAnswer(id) || answeredOwn(id) || answeredAll(id);
 const qDue = () => {
   const open = (B.questions || []).filter((q) => !answered(q.id)), newest = open.map((q) => q.added || '').sort().pop() || '';
   const set = FB.on ? thread('q:all').filter((m) => m.role === 'client' && m.kind === 'due' && /^\d{4}-\d{2}-\d{2}$/.test(m.due || '')).pop() : null;
@@ -1407,7 +1408,7 @@ const qIntrosFor = (arr) => [...new Set(arr.map((q) => q.group))].map(qGroupIntr
 const qIsNew = (q) => !answered(q.id) && !!q.added && qSplit().done.length > 0;
 function vQuestions() {
   const { qs, open, done, fresh } = qSplit();
-  const row = (q) => { const i = qs.indexOf(q), cl = qClosed(q.id), own = answeredOwn(q.id), ok = !!cl || own || answeredAll(q.id), nw = !ok && fresh && !!q.added; return `<button class="row${nw ? ' new-q' : ''}" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${nw ? `<i class="q-new">New</i>Added ${esc(fmt(q.added))}` : cl ? esc(cl) + ' No answer needed.' : own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${cl ? 'Done' : ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; };
+  const row = (q) => { const i = qs.indexOf(q), cl = qClosed(q.id), an = !!qAnswer(q.id), own = answeredOwn(q.id), ok = !!cl || an || own || answeredAll(q.id), nw = !ok && fresh && !!q.added; return `<button class="row${nw ? ' new-q' : ''}" data-q="${q.id}"><span class="kind ${ok ? 'done' : ''}">${svg(ok ? 'check' : 'chat')}</span><span class="row-t">${i + 1}. ${esc(q.q)}<small>${nw ? `<i class="q-new">New</i>Added ${esc(fmt(q.added))}` : cl ? esc(cl) + ' No answer needed.' : an ? 'Answered, thank you. Open it to see what happens next.' : own ? 'Answered' : ok ? 'Covered in your answer to all' : 'Not answered yet'}</small></span><span class="when ${ok ? 'done' : ''}">${cl ? 'Done' : ok ? 'Answered' : ''}</span>${ccHtml(countFor([`q:${q.id}`]))}${svg('chev', 'chev')}</button>`; };
   const list = (arr) => `<div class="p-list">${arr.map(row).join('')}</div>`;
   const all = `<a href="#qall" data-qall>answer them all at once</a>`;
   const intro = fresh
@@ -1427,9 +1428,15 @@ function vQuestion(q) {
   const qs = B.questions || [], i = qs.indexOf(q), next = qs.slice(i + 1).concat(qs.slice(0, i)).find((x) => !answered(x.id));
   let h = `<div class="p-eye">${svg('chat', 'ic')}Question ${i + 1} of ${qs.length} · ${esc(q.group || '')}${qIsNew(q) ? '<i class="q-new">New question</i>' : ''}</div><h3>${esc(q.q)}</h3>`;
   if (q.closed) h += `<div class="note good"><h4>No answer needed</h4><p>${esc(q.closed)}</p></div>`;
+  else if (q.answer) {
+    h += `<div class="note good"><h4>Your answer, and what happens next</h4>${qContextHtml(q.answer)}</div>`;
+    h += stepsHtml(q.answerSteps && q.answerSteps.length ? q.answerSteps : ['Nothing for you to do; this is just so you know.']);
+    const orig = q.context ? qContextHtml(q.context) : q.hint ? `<p class="qc-p">${esc(q.hint)}</p>` : '';
+    if (orig) h += `<details class="q-old"><summary>The original question, for reference${svg('chev', 'chev')}</summary><div class="note info">${orig}</div></details>`;
+  }
   else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
-  if (!q.closed) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
+  if (!q.closed && !q.answer) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
   h += commentsHtml(`q:${q.id}`, false, q.closed ? 'Comments (optional)' : 'Your answer');
   h += `<div class="action-b" style="margin-top:16px">${next ? `<button class="btn ghost" data-q="${next.id}">Next question</button>` : ''}<button class="btn ghost" data-qall>Answer all at once</button></div>`;
   return h;
