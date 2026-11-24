@@ -497,7 +497,7 @@
   .lib-body .note { margin: 14px 0; } .lib-body .note p { margin: 0; font-size: 15px; line-height: 1.6; } .lib-body .note ol { margin: 4px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.6; }
   .lib-body .q-fig { margin: 16px 0 18px; } .lib-body .q-fig img { margin: 0 auto; max-height: none; max-width: 440px; width: 100%; }
   .lib-body dl { margin: 6px 0 10px; } .lib-body dt { font-weight: 600; margin-top: 10px; } .lib-body dd { margin: 2px 0 0; color: var(--ink2); }
-  .lib-act { margin: 16px 0 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .lib-act { margin: 16px 0 6px; display: flex; gap: 8px; flex-wrap: wrap; } .lib-act .btn { display: inline-flex; align-items: center; gap: 8px; } .lib-act svg { width: 16px; height: 16px; flex: none; }
   @media (max-width: 760px) {
     .nx-wrap { grid-template-columns: minmax(0, 1fr); }
     .nx-side { border-right: 0; }
@@ -566,7 +566,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '8f87d3932c8a'; // set when the tracker is published
+const PAGE_VERSION = '2bf9ef05cdb7'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
