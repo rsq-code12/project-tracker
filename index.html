@@ -172,6 +172,7 @@
   .qc-p a, .qc-ul a { overflow-wrap: anywhere; word-break: break-word; }
   .qc-ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink2); line-height: 1.6; } .qc-ul li + li { margin-top: 6px; }
   .q-intro { margin: 0 0 12px; font-size: 14px; color: var(--ink2); line-height: 1.6; }
+  .q-fig { margin: 14px 0 0; padding: 0; } .q-fig img { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; border: 1px solid var(--line); border-radius: 14px; background: #fff; } .q-fig figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; max-width: 100%; }
   .chip:hover { border-color: var(--ink2); }
@@ -557,7 +558,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = 'e293bdb78dbc'; // set when the tracker is published
+const PAGE_VERSION = '63ebaa5296ba'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1405,6 +1406,8 @@ function qContextHtml(t) {
 }
 const qGroupIntro = (g) => ((B.questionGroupIntros || {})[g] || '');
 const qIntrosFor = (arr) => [...new Set(arr.map((q) => q.group))].map(qGroupIntro).filter(Boolean).map((t) => `<p class="q-intro">${esc(t)}</p>`).join('');
+// Simple pictures on a question (SVG shown as an image, so nothing in it can run).
+const qPicsHtml = (q) => (q.pictures || []).filter((p) => p && p.svg).map((p) => `<figure class="q-fig"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(p.svg)}" alt="${esc(p.alt || '')}" loading="lazy">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('');
 const qIsNew = (q) => !answered(q.id) && !!q.added && qSplit().done.length > 0;
 function vQuestions() {
   const { qs, open, done, fresh } = qSplit();
@@ -1431,10 +1434,10 @@ function vQuestion(q) {
   else if (q.answer) {
     h += `<div class="note good"><h4>Your answer, and what happens next</h4>${qContextHtml(q.answer)}</div>`;
     h += stepsHtml(q.answerSteps && q.answerSteps.length ? q.answerSteps : ['Nothing for you to do; this is just so you know.']);
-    const orig = q.context ? qContextHtml(q.context) : q.hint ? `<p class="qc-p">${esc(q.hint)}</p>` : '';
+    const orig = q.context ? qContextHtml(q.context) + qPicsHtml(q) : q.hint ? `<p class="qc-p">${esc(q.hint)}</p>` : '';
     if (orig) h += `<details class="q-old"><summary>The original question, for reference${svg('chev', 'chev')}</summary><div class="note info">${orig}</div></details>`;
   }
-  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}</div>`;
+  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}${qPicsHtml(q)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   if (!q.closed && !q.answer) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
   h += commentsHtml(`q:${q.id}`, false, q.closed ? 'Comments (optional)' : 'Your answer');
