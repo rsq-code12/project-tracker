@@ -494,6 +494,7 @@
   .nx-side-t { margin: 10px 10px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
   .nx-item.lib b::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 7px; vertical-align: 2px; }
   .lib-sum { font-size: 17px; line-height: 1.6; color: var(--ink2); margin: 4px 0 18px; }
+  .note .lib-tw { background: var(--surface); } .note .lib-t { min-width: 520px; font-size: 13.5px; }
   .lib-body .note { margin: 14px 0; } .lib-body .note p { margin: 0; font-size: 15px; line-height: 1.6; } .lib-body .note ol { margin: 4px 0 0; padding-left: 22px; font-size: 15px; line-height: 1.6; }
   .lib-body .q-fig { margin: 16px 0 18px; } .lib-body .q-fig img { margin: 0 auto; max-height: none; max-width: 440px; width: 100%; }
   .lib-tw { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--line); border-radius: 12px; -webkit-overflow-scrolling: touch; }
@@ -572,7 +573,7 @@ const P = {
 const svg = (n, c = '') => `<svg class="${c}" viewBox="0 0 20 20" aria-hidden="true">${P[n]}</svg>`;
 
 let B = null, C = null, lastGen = null, today = todayStr();
-const PAGE_VERSION = '8a3f3d57d700'; // set when the tracker is published
+const PAGE_VERSION = '3b6f7f272c48'; // set when the tracker is published
 const ui = { stack: [] };
 
 /* ---------- Data ---------- */
@@ -1448,10 +1449,10 @@ function vQuestion(q) {
   else if (q.answer) {
     h += `<div class="note good"><h4>Your answer, and what happens next</h4>${qContextHtml(q.answer)}</div>`;
     h += stepsHtml(q.answerSteps && q.answerSteps.length ? q.answerSteps : ['Nothing for you to do; this is just so you know.']);
-    const orig = q.context ? qContextHtml(q.context) + qPicsHtml(q) : q.hint ? `<p class="qc-p">${esc(q.hint)}</p>` : '';
+    const orig = q.context ? qContextHtml(q.context) + (q.compare ? libBlockHtml({ type: 'table', head: q.compare.head, rows: q.compare.rows }) : '') + qPicsHtml(q) : q.hint ? `<p class="qc-p">${esc(q.hint)}</p>` : '';
     if (orig) h += `<details class="q-old"><summary>The original question, for reference${svg('chev', 'chev')}</summary><div class="note info">${orig}</div></details>`;
   }
-  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}${qPicsHtml(q)}</div>`;
+  else if (q.context) h += `${qGroupIntro(q.group) ? `<p class="q-intro">${esc(qGroupIntro(q.group))}</p>` : ''}<div class="note info"><h4>${esc(q.contextTitle || 'What we plan to build')}</h4>${qContextHtml(q.context)}${q.compare ? libBlockHtml({ type: 'table', head: q.compare.head, rows: q.compare.rows }) : ''}${qPicsHtml(q)}</div>`;
   else if (q.hint) h += `<div class="note info"><h4>My suggestion</h4><p>${esc(q.hint)}</p></div>`;
   if (!q.closed && !q.answer) h += stepsHtml(q.nextSteps && q.nextSteps.length ? q.nextSteps : ['Type your answer in the box below, or tap the microphone to record a voice note.', 'Tap Send.', 'I read it the same day and reply here, then make the change.']);
   if (q.guide && libPage(`lib-${q.guide}`)) h += `<div class="lib-act"><button class="btn ghost" data-open-lib="${esc(q.guide)}">${svg('doc')}Read the full explainer in My notes</button></div>`;
